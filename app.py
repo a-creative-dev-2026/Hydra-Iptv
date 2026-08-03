@@ -7,48 +7,80 @@ import logging
 from proxy import SmartProxy
 from config import Config
 from channels import COUNTRY_CHANNELS, CATEGORIES, get_country_url, get_category_url
+from epg import EPG
+from scheduler import start_scheduler
+
+# ============================================================
+# تهيئة التطبيق
+# ============================================================
 
 app = Flask(__name__)
 CORS(app)
 
+# Rate Limiting
 limiter = Limiter(
     app=app,
     key_func=get_remote_address,
     default_limits=["200 per day", "50 per hour"]
 )
 
+# التسجيل
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# تهيئة البروكسي
 proxy = SmartProxy()
+
+# تهيئة EPG (دليل البرامج)
+epg = EPG()
+
+# بدء المجدول للتحقق الدوري من الروابط
+scheduler = start_scheduler()
+
+# ============================================================
+# المسارات الأساسية
+# ============================================================
 
 @app.route('/')
 def index():
     return jsonify({
         'name': 'Hydra IPTV Server',
-        'version': '3.0.0',
-        'description': 'خادم IPTV مع بحث متقدم في الدول والتصنيفات',
+        'version': '3.1.0',
+        'description': 'خادم IPTV مع بحث متقدم، EPG، وكاش ذكي',
         'features': [
-            'دعم 126 دولة حول العالم',
-            '15 تصنيف مختلف (رياضة، أخبار، أفلام...)',
-            'بحث متقدم في مصادر متعددة',
+            'دعم 193 دولة حول العالم',
+            '31 تصنيفاً مختلفاً',
+            'بحث ضبابي (Fuzzy Search)',
+            'دليل برامج EPG',
+            'تحقق دوري من صحة الروابط',
+            'كاش باستخدام Redis (مع fallback JSON)',
             'بروكسي ذكي مع تجاوز الأعطال'
         ],
         'endpoints': {
             'GET /': 'معلومات الخدمة',
             'GET /channel/<name>': 'بث قناة مباشرة',
-            'GET /search/<name>': 'بحث عن قناة',
+            'GET /search/<name>': 'بحث عن قناة (مع Fuzzy Search)',
             'GET /playlist/country/<code>': 'قائمة قنوات الدولة',
             'GET /playlist/category/<category>': 'قائمة قنوات التصنيف',
-            'GET /playlist/local': 'القائمة المحلية'
+            'GET /playlist/local': 'القائمة المحلية',
+            'GET /epg/<channel_name>': 'دليل برامج القناة',
+            'GET /epg/country/<country_code>': 'دليل برامج الدولة',
+            'GET /stats': 'إحصائيات الكاش'
         },
         'examples': {
             'channel': '/channel/Al%20Jazeera',
-            'search': '/search/MBC%201',
+            'search': '/search/bein%20sport',
             'playlist_country': '/playlist/country/tn',
-            'playlist_category': '/playlist/category/sports'
+            'playlist_category': '/playlist/category/sports',
+            'epg_channel': '/epg/Al%20Jazeera',
+            'epg_country': '/epg/country/qa',
+            'stats': '/stats'
         }
     })
+
+# ============================================================
+# البث المباشر
+# ============================================================
 
 @app.route('/channel/<channel_name>')
 @limiter.limit("10 per minute")
@@ -58,6 +90,10 @@ def stream_channel(channel_name):
     if stream:
         return stream
     return jsonify({'error': f'لم يتم العثور على {channel_name}'}), 404
+
+# ============================================================
+# البحث
+# ============================================================
 
 @app.route('/search/<channel_name>')
 @limiter.limit("5 per 30 seconds")
@@ -73,6 +109,10 @@ def search_channel(channel_name):
             'count': len(links)
         })
     return jsonify({'found': False, 'channel': channel_name}), 404
+
+# ============================================================
+# قوائم التشغيل (Playlists)
+# ============================================================
 
 @app.route('/playlist/country/<country_code>')
 @limiter.limit("20 per minute")
@@ -123,9 +163,57 @@ def get_local_playlist():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# ============================================================
+# EPG (دليل البرامج)
+# ============================================================
+
+@app.route('/epg/<channel_name>')
+@limiter.limit("10 per minute")
+def get_epg(channel_name):
+    """جلب دليل البرامج لقناة معينة"""
+    country_code = request.args.get('country')
+    result = epg.get_simple_epg(channel_name, country_code)
+    return jsonify(result)
+
+@app.route('/epg/country/<country_code>')
+@limiter.limit("5 per minute")
+def get_country_epg(country_code):
+    """جلب دليل البرامج لدولة كاملة (ملف XML)"""
+    try:
+        url = f"https://iptv-org.github.io/epg/guides/{country_code}.xml"
+        import requests as req
+        response = req.get(url, timeout=15)
+        if response.status_code == 200:
+            return Response(
+                response.text,
+                status=200,
+                content_type='application/xml'
+            )
+    except Exception as e:
+        logger.error(f"❌ خطأ في جلب EPG: {e}")
+        return jsonify({'error': str(e)}), 500
+    return jsonify({'error': 'لم يتم العثور على الدليل'}), 404
+
+# ============================================================
+# إحصائيات ومراقبة
+# ============================================================
+
+@app.route('/stats')
+def get_stats():
+    """إحصائيات الكاش وحالة السيرفر"""
+    stats = proxy.get_cache_stats()
+    stats['total_countries'] = len(COUNTRY_CHANNELS)
+    stats['total_categories'] = len(CATEGORIES)
+    stats['status'] = 'running'
+    return jsonify(stats)
+
+# ============================================================
+# تشغيل التطبيق
+# ============================================================
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    print("🐍 Hydra IPTV Server v3.0")
+    print("🐍 Hydra IPTV Server v3.1.0")
     print("=" * 60)
     print(f"✅ السيرفر يعمل على: http://0.0.0.0:{port}")
     print(f"🌍 عدد الدول: {len(COUNTRY_CHANNELS)} دولة")
