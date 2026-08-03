@@ -6,7 +6,7 @@ from flask_limiter.util import get_remote_address
 import logging
 from proxy import SmartProxy
 from config import Config
-from channels import COUNTRY_CHANNELS, CATEGORIES, STATIC_CHANNELS, get_country_url, get_category_url
+from channels import COUNTRY_CHANNELS, CATEGORIES, get_country_url, get_category_url
 
 app = Flask(__name__)
 CORS(app)
@@ -27,11 +27,10 @@ def index():
     return jsonify({
         'name': 'Hydra IPTV Server',
         'version': '3.0.0',
-        'description': 'خادم IPTV مع مصادر ثابتة وبحث متقدم',
+        'description': 'خادم IPTV مع بحث متقدم في الدول والتصنيفات',
         'features': [
-            'قنوات ثابتة (الجزيرة، العربية، CNN...)',
-            'أكثر من 13,971 قناة محلية',
-            'دعم 126 دولة',
+            'دعم 126 دولة حول العالم',
+            '15 تصنيف مختلف (رياضة، أخبار، أفلام...)',
             'بحث متقدم في مصادر متعددة',
             'بروكسي ذكي مع تجاوز الأعطال'
         ],
@@ -41,15 +40,13 @@ def index():
             'GET /search/<name>': 'بحث عن قناة',
             'GET /playlist/country/<code>': 'قائمة قنوات الدولة',
             'GET /playlist/category/<category>': 'قائمة قنوات التصنيف',
-            'GET /playlist/local': 'القائمة المحلية',
-            'GET /channels/static': 'قائمة القنوات الثابتة'
+            'GET /playlist/local': 'القائمة المحلية'
         },
         'examples': {
             'channel': '/channel/Al%20Jazeera',
             'search': '/search/MBC%201',
             'playlist_country': '/playlist/country/tn',
-            'playlist_category': '/playlist/category/sports',
-            'static_channels': '/channels/static'
+            'playlist_category': '/playlist/category/sports'
         }
     })
 
@@ -126,13 +123,6 @@ def get_local_playlist():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/channels/static')
-def list_static_channels():
-    return jsonify({
-        'total': len(STATIC_CHANNELS),
-        'channels': STATIC_CHANNELS
-    })
-
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     print("🐍 Hydra IPTV Server v3.0")
@@ -140,6 +130,5 @@ if __name__ == '__main__':
     print(f"✅ السيرفر يعمل على: http://0.0.0.0:{port}")
     print(f"🌍 عدد الدول: {len(COUNTRY_CHANNELS)} دولة")
     print(f"📂 عدد التصنيفات: {len(CATEGORIES)} تصنيف")
-    print(f"📺 عدد القنوات الثابتة: {len(STATIC_CHANNELS)} قناة")
     print("=" * 60)
     app.run(host='0.0.0.0', port=port, debug=False)
