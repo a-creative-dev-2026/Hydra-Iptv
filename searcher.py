@@ -63,14 +63,14 @@ class ChannelSearcher:
         normalized = self._normalize_name(channel_name)
         
         # البحث في جميع المصادر بالتوازي
-        with ThreadPoolExecutor(max_workers=8) as executor:
+        with ThreadPoolExecutor(max_workers=6) as executor:  # قللنا عدد العمال لتخفيف الضغط
             futures = {
                 executor.submit(source_func, normalized): source_func.__name__
                 for source_func in self.sources
             }
             for future in as_completed(futures):
                 try:
-                    links = future.result(timeout=20)
+                    links = future.result(timeout=25)  # مهلة 25 ثانية لكل مصدر
                     if links:
                         all_links.extend(links)
                         logger.info(f"✅ تم العثور على {len(links)} رابط من {futures[future]}")
@@ -100,7 +100,7 @@ class ChannelSearcher:
             ]
             links = []
             for url in urls:
-                response = self.session.get(url, timeout=15)
+                response = self.session.get(url, timeout=10)
                 if response.status_code == 200:
                     pattern = rf'#EXTINF:.*,.*{re.escape(channel_name)}.*\n(https?://[^\s]+)'
                     matches = re.findall(pattern, response.text, re.IGNORECASE)
@@ -113,7 +113,7 @@ class ChannelSearcher:
     def _search_free_tv(self, channel_name):
         try:
             url = "https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8"
-            response = self.session.get(url, timeout=15)
+            response = self.session.get(url, timeout=10)
             if response.status_code == 200:
                 pattern = rf'#EXTINF:.*,.*{re.escape(channel_name)}.*\n(https?://[^\s]+)'
                 return re.findall(pattern, response.text, re.IGNORECASE)
@@ -130,7 +130,7 @@ class ChannelSearcher:
             ]
             links = []
             for url in urls:
-                response = self.session.get(url, timeout=15)
+                response = self.session.get(url, timeout=10)
                 if response.status_code == 200:
                     pattern = rf'#EXTINF:.*,.*{re.escape(channel_name)}.*\n(https?://[^\s]+)'
                     matches = re.findall(pattern, response.text, re.IGNORECASE)
@@ -143,7 +143,7 @@ class ChannelSearcher:
     def _search_world_iptv(self, channel_name):
         try:
             url = "https://romaxa55.github.io/world_ip_tv/output/index.m3u"
-            response = self.session.get(url, timeout=15)
+            response = self.session.get(url, timeout=10)
             if response.status_code == 200:
                 pattern = rf'#EXTINF:.*,.*{re.escape(channel_name)}.*\n(https?://[^\s]+)'
                 return re.findall(pattern, response.text, re.IGNORECASE)
@@ -154,7 +154,7 @@ class ChannelSearcher:
     def _search_iptv_hub(self, channel_name):
         try:
             url = "https://raw.githubusercontent.com/iptv-hub/iptv-hub/main/playlist.m3u"
-            response = self.session.get(url, timeout=15)
+            response = self.session.get(url, timeout=10)
             if response.status_code == 200:
                 pattern = rf'#EXTINF:.*,.*{re.escape(channel_name)}.*\n(https?://[^\s]+)'
                 return re.findall(pattern, response.text, re.IGNORECASE)
@@ -162,7 +162,7 @@ class ChannelSearcher:
             logger.warning(f"⚠️ خطأ في IPTV-Hub: {e}")
         return []
     
-    # ============== البحث في تليجرام ==============
+    # ============== البحث في تليجرام (مُحسّن) ==============
     
     def _search_telegram_channels(self, channel_name):
         if not self.telegram_client:
@@ -175,8 +175,9 @@ class ChannelSearcher:
             
             for channel in Config.TELEGRAM_CHANNELS:
                 try:
+                    # جلب آخر 10 رسائل فقط (بدلاً من 50) لتقليل الوقت
                     messages = loop.run_until_complete(
-                        self._fetch_telegram_messages(channel, limit=50)
+                        self._fetch_telegram_messages(channel, limit=10)
                     )
                     if messages:
                         links = self._extract_links_from_text(messages)
@@ -192,7 +193,7 @@ class ChannelSearcher:
             logger.error(f"❌ خطأ في البحث في تليجرام: {e}")
             return []
     
-    async def _fetch_telegram_messages(self, channel_name, limit=50):
+    async def _fetch_telegram_messages(self, channel_name, limit=10):
         try:
             await self.telegram_client.start()
             entity = await self.telegram_client.get_entity(channel_name)
@@ -228,7 +229,7 @@ class ChannelSearcher:
             
             # DuckDuckGo
             ddg_url = f"https://html.duckduckgo.com/html/?q={channel_name.replace(' ', '+')}+m3u8"
-            response = self.session.get(ddg_url, timeout=15)
+            response = self.session.get(ddg_url, timeout=10)
             if response.status_code == 200:
                 pattern = r'(https?://[^\s"\']+\.m3u8[^\s"\']*)'
                 ddg_links = re.findall(pattern, response.text, re.IGNORECASE)
@@ -236,7 +237,7 @@ class ChannelSearcher:
             
             # Bing
             bing_url = f"https://www.bing.com/search?q={channel_name.replace(' ', '+')}+m3u8"
-            response = self.session.get(bing_url, timeout=15)
+            response = self.session.get(bing_url, timeout=10)
             if response.status_code == 200:
                 pattern = r'(https?://[^\s"\']+\.m3u8[^\s"\']*)'
                 bing_links = re.findall(pattern, response.text, re.IGNORECASE)
@@ -255,7 +256,7 @@ class ChannelSearcher:
             for site in Config.KNOWN_SITES:
                 try:
                     url = f"{site}/search?q={channel_name.replace(' ', '+')}"
-                    response = self.session.get(url, timeout=15)
+                    response = self.session.get(url, timeout=10)
                     if response.status_code == 200:
                         pattern = r'(https?://[^\s"\']+\.m3u8[^\s"\']*)'
                         found = re.findall(pattern, response.text, re.IGNORECASE)
@@ -305,7 +306,7 @@ class ChannelSearcher:
     
     def _validate_links(self, links):
         valid = []
-        for link in links[:10]:
+        for link in links[:8]:  # قللنا العدد إلى 8 للسرعة
             try:
                 for attempt in range(2):
                     try:
