@@ -11,94 +11,113 @@ from rapidfuzz import fuzz, process
 
 logger = logging.getLogger(__name__)
 
-class SiteHunter:
+class MegaHunter:
     """
-    صياد المواقع - يستخرج روابط البث مباشرة من الصفحات
+    الصياد المتكامل - يجمع بين:
+    1. قوائم M3U الضخمة (أكثر من 50 مصدراً)
+    2. مواقع البث المباشر (Yacine, Ostora, Yalla Shoot, General Pro, Koora, BeIN)
+    3. قنوات تليجرام
+    4. محركات البحث
     """
     
     def __init__(self):
-        self.timeout = aiohttp.ClientTimeout(total=20)
+        self.timeout = aiohttp.ClientTimeout(total=15)
         self.session = None
         self.semaphore = asyncio.Semaphore(20)
         self.failed_links = set()
         
-        # رؤوس المتصفح لتجنب الحجب
-        self.headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.9,ar;q=0.8',
-            'Accept-Encoding': 'gzip, deflate, br',
-            'Connection': 'keep-alive',
-        }
-        
         # ============================================================
-        # 🌐 مواقع البث المباشر (التي أرسلتها)
-        # ============================================================
-        self.streaming_sites = {
-            # Yacine TV
-            'yacinetv': {
-                'domains': ['yacinetv.com', 'yacinetv.live'],
-                'type': 'yacine',
-                'search_url': 'https://yacinetv.com/search?q={query}',
-            },
-            # Ostora TV
-            'ostora': {
-                'domains': ['ostora.tv'],
-                'type': 'ostora',
-                'search_url': 'https://ostora.tv/search?q={query}',
-            },
-            # Yalla Shoot
-            'yallashoot': {
-                'domains': ['yallashoot.com', 'yallashoot-live.com', 'yallashoot-new.com', 
-                           'yallashoot-pro.com', 'yallashoot-plus.com', 'yallashoot-online.com',
-                           'yallashoot-tv.com', 'yallashoot.net', 'yallashootlivetv.com'],
-                'type': 'yalla',
-                'search_url': 'https://www.yallashoot.com/search?q={query}',
-            },
-            # General Pro
-            'generalpro': {
-                'domains': ['generalpro.app', 'generalpro.tv', 'generalpro.live', 
-                           'generalprosports.com', 'generalprofootball.com'],
-                'type': 'general',
-                'search_url': 'https://generalpro.app/search?q={query}',
-            },
-            # Koora Live
-            'koora': {
-                'domains': ['koralive.com', 'kooorastar.com'],
-                'type': 'koora',
-                'search_url': 'https://www.koralive.com/search?q={query}',
-            },
-            # BeIN Match
-            'beinmatch': {
-                'domains': ['beinmatch.com'],
-                'type': 'beinmatch',
-                'search_url': 'https://www.beinmatch.com/search?q={query}',
-            },
-            # Sport Plus
-            'sportplus': {
-                'domains': ['sportplustv.com', 'livefootballtv.com'],
-                'type': 'sportplus',
-                'search_url': 'https://sportplustv.com/search?q={query}',
-            },
-        }
-        
-        # ============================================================
-        # 🔥 قوائم M3U (مصادر إضافية)
+        # 🔥 1. قوائم M3U الضخمة (أكثر من 50 مصدراً)
         # ============================================================
         self.m3u_sources = [
+            # المصادر الرئيسية (أكثر من 20,000 قناة)
             'https://iptv-org.github.io/iptv/index.m3u',
             'https://iptv-org.github.io/iptv/index.nsfw.m3u',
             'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8',
             'https://raw.githubusercontent.com/iptv-hub/iptv-hub/main/playlist.m3u',
             'https://romaxa55.github.io/world_ip_tv/output/index.m3u',
+            
+            # مستودعات GitHub (مصادر متعددة)
             'https://raw.githubusercontent.com/ismailozgul/iptv/main/playlist.m3u',
             'https://raw.githubusercontent.com/mhdzumair/IPTV/main/playlist.m3u',
             'https://raw.githubusercontent.com/azenv/IPTV/main/playlist.m3u',
             'https://raw.githubusercontent.com/Kodi-n-Playlist/iptv/main/playlist.m3u',
+            'https://raw.githubusercontent.com/jaydenmb/iptv/main/playlist.m3u',
+            'https://raw.githubusercontent.com/emirbey/iptv/main/playlist.m3u',
+            'https://raw.githubusercontent.com/matthew1981/m3u/main/playlist.m3u',
+            'https://raw.githubusercontent.com/kayleekay/iptv/main/playlist.m3u',
+            'https://raw.githubusercontent.com/samirsam/iptv/main/playlist.m3u',
+            'https://raw.githubusercontent.com/billybonk/iptv/main/playlist.m3u',
+            'https://raw.githubusercontent.com/kingy444/iptv/main/playlist.m3u',
+            'https://raw.githubusercontent.com/MikiBzh/IPTV/main/playlist.m3u',
+            'https://raw.githubusercontent.com/sn7696/IPTV/main/playlist.m3u',
+            'https://raw.githubusercontent.com/nikooo777/iptv/main/playlist.m3u',
+            'https://raw.githubusercontent.com/junguler/m3u/main/playlist.m3u',
+            
+            # قوائم حسب الدول (مصادر إضافية)
+            'https://iptv-org.github.io/iptv/countries/us.m3u',
+            'https://iptv-org.github.io/iptv/countries/gb.m3u',
+            'https://iptv-org.github.io/iptv/countries/fr.m3u',
+            'https://iptv-org.github.io/iptv/countries/de.m3u',
+            'https://iptv-org.github.io/iptv/countries/it.m3u',
+            'https://iptv-org.github.io/iptv/countries/es.m3u',
+            'https://iptv-org.github.io/iptv/countries/tr.m3u',
+            'https://iptv-org.github.io/iptv/countries/sa.m3u',
+            'https://iptv-org.github.io/iptv/countries/ae.m3u',
+            'https://iptv-org.github.io/iptv/countries/qa.m3u',
+            'https://iptv-org.github.io/iptv/countries/eg.m3u',
+            'https://iptv-org.github.io/iptv/countries/tn.m3u',
+            'https://iptv-org.github.io/iptv/countries/ma.m3u',
+            'https://iptv-org.github.io/iptv/countries/dz.m3u',
+            'https://iptv-org.github.io/iptv/countries/jo.m3u',
+            'https://iptv-org.github.io/iptv/countries/lb.m3u',
+            'https://iptv-org.github.io/iptv/countries/kw.m3u',
+            'https://iptv-org.github.io/iptv/countries/om.m3u',
+            'https://iptv-org.github.io/iptv/countries/bh.m3u',
         ]
         
         # ============================================================
-        # 📡 قنوات تليجرام
+        # 🌐 2. مواقع البث المباشر (التي قدمتها)
+        # ============================================================
+        self.streaming_sites = [
+            # Yacine TV
+            'https://yacinetv.com',
+            'https://yacinetv.live',
+            # Ostora TV
+            'https://ostora.tv',
+            # Yalla Shoot (جميع النطاقات)
+            'https://www.yallashoot.com',
+            'https://www.yallashoot-live.com',
+            'https://www.yallashoot-new.com',
+            'https://www.yallashoot-pro.com',
+            'https://www.yallashoot-plus.com',
+            'https://www.yallashoot-online.com',
+            'https://www.yallashoot-tv.com',
+            'https://www.yallashoot.net',
+            'https://www.yallashootlivetv.com',
+            # General Pro (جميع النطاقات)
+            'https://generalpro.app',
+            'https://generalpro.tv',
+            'https://generalpro.live',
+            'https://generalprosports.com',
+            'https://generalprofootball.com',
+            'https://generalproapk.com',
+            'https://generalprohd.com',
+            'https://generalproplus.com',
+            'https://generalprostream.com',
+            'https://generalpromatch.com',
+            # Koora Live
+            'https://www.koralive.com',
+            'https://www.kooorastar.com',
+            # BeIN Match
+            'https://www.beinmatch.com',
+            # Sport Plus
+            'https://sportplustv.com',
+            'https://livefootballtv.com',
+        ]
+        
+        # ============================================================
+        # 📡 3. قنوات تليجرام
         # ============================================================
         self.telegram_sources = [
             'iptv_links', 'm3u8_files', 'beIN_Sports_links',
@@ -107,19 +126,44 @@ class SiteHunter:
             'iptv_playlist', 'm3u_streams', 'iptv_m3u8',
         ]
         
-        logger.info(f"🔥 تم تهيئة صياد المواقع مع {len(self.streaming_sites)} موقعاً")
+        # ============================================================
+        # 📡 4. منصات رسمية
+        # ============================================================
+        self.official_sites = [
+            'https://www.dazn.com',
+            'https://www.tod.tv',
+            'https://connect.beinsports.com',
+            'https://www.skysports.com/watch',
+            'https://www.espn.com/watch/',
+            'https://www.bbc.co.uk/iplayer',
+            'https://www.fifa.com/fifaplus/en',
+            'https://www.sonyliv.com',
+            'https://www.hotstar.com',
+        ]
+        
+        # ============================================================
+        # 🔍 إعدادات الجودة
+        # ============================================================
+        self.trusted_domains = [
+            'amagi.tv', 'akamaized.net', 'streamlock.net', 'sofast.tv',
+            'cloudfront.net', 'edgenextcdn.net', 'cdn3.wowza.com'
+        ]
+        
+        logger.info(f"🔥 تم تهيئة الصياد المتكامل مع:")
+        logger.info(f"  - {len(self.m3u_sources)} مصدر M3U")
+        logger.info(f"  - {len(self.streaming_sites)} موقع بث مباشر")
+        logger.info(f"  - {len(self.telegram_sources)} قناة تليجرام")
     
     # ============================================================
     # 🎯 الوظيفة الرئيسية
     # ============================================================
     
     async def hunt(self, channel_name, max_results=10):
-        """الصيد الشامل - استخراج الروابط من المواقع"""
+        """الصيد المتكامل"""
         logger.info(f"🔍 بدء الصيد عن: {channel_name}")
         start_time = time.time()
         all_links = []
         
-        # توليد كلمات البحث
         keywords = self._generate_keywords(channel_name)
         logger.info(f"📝 كلمات البحث: {keywords}")
         
@@ -127,16 +171,22 @@ class SiteHunter:
             self.session = session
             
             # 1. البحث في قوائم M3U
-            tasks = [self._search_m3u(url, keywords) for url in self.m3u_sources[:8]]
+            tasks = [self._search_m3u(url, keywords) for url in self.m3u_sources[:15]]
             
-            # 2. البحث في تليجرام
+            # 2. البحث في مواقع البث المباشر
+            for site in self.streaming_sites[:10]:
+                tasks.append(self._search_streaming_site(site, keywords))
+            
+            # 3. البحث في قنوات تليجرام
             for keyword in keywords[:3]:
                 tasks.append(self._search_telegram(keyword))
             
-            # 3. 🔥 البحث في المواقع (الجزء الأهم)
-            for site_name, site_info in self.streaming_sites.items():
-                for keyword in keywords[:3]:
-                    tasks.append(self._search_site(site_info, keyword))
+            # 4. البحث في المنصات الرسمية
+            for site in self.official_sites[:5]:
+                tasks.append(self._search_official_site(site, keywords))
+            
+            # 5. البحث في محركات البحث
+            tasks.append(self._search_web(keywords[0] if keywords else channel_name))
             
             # تنفيذ المهام بالتوازي
             results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -144,20 +194,21 @@ class SiteHunter:
             for result in results:
                 if isinstance(result, list):
                     all_links.extend(result)
-                    logger.info(f"✅ تم العثور على {len(result)} رابط")
+                    if result:
+                        logger.info(f"✅ تم العثور على {len(result)} رابط")
                 elif isinstance(result, Exception):
                     logger.debug(f"⚠️ خطأ: {str(result)[:50]}")
         
-        # 4. تنقية وترتيب
+        # تنقية وترتيب
         unique_links = self._deduplicate(all_links)
         filtered_links = self._filter_by_keywords(unique_links, keywords)
         ranked_links = self._rank_links(filtered_links, channel_name)
         
-        # 5. اختبار سريع (HEAD فقط لتسريع العملية)
+        # اختبار سريع
         logger.info("🧪 جاري التحقق من الروابط...")
         validated = await self._quick_validate(ranked_links[:20])
         
-        # 6. اختيار أفضل النتائج
+        # اختيار أفضل النتائج
         final = self._select_best(validated, max_results)
         
         elapsed = time.time() - start_time
@@ -165,191 +216,10 @@ class SiteHunter:
         return final
     
     # ============================================================
-    # 🌐 1. البحث في موقع معين (استخراج الروابط)
-    # ============================================================
-    
-    async def _search_site(self, site_info, keyword):
-        """البحث في موقع معين واستخراج روابط البث"""
-        links = []
-        try:
-            # جرب جميع النطاقات المرتبطة بالموقع
-            for domain in site_info['domains']:
-                try:
-                    # 1. جلب صفحة البحث
-                    search_url = site_info['search_url'].format(query=quote_plus(keyword))
-                    headers = self._get_headers()
-                    
-                    async with self.semaphore:
-                        async with self.session.get(search_url, headers=headers) as response:
-                            if response.status != 200:
-                                continue
-                            
-                            content = await response.text()
-                            
-                            # 2. استخراج الروابط حسب نوع الموقع
-                            site_type = site_info['type']
-                            
-                            if site_type == 'yacine':
-                                links.extend(await self._extract_yacine(content))
-                            elif site_type == 'ostora':
-                                links.extend(await self._extract_ostora(content))
-                            elif site_type == 'yalla':
-                                links.extend(await self._extract_yalla(content))
-                            elif site_type == 'general':
-                                links.extend(await self._extract_general(content))
-                            elif site_type == 'koora':
-                                links.extend(await self._extract_koora(content))
-                            elif site_type == 'beinmatch':
-                                links.extend(await self._extract_beIN(content))
-                            elif site_type == 'sportplus':
-                                links.extend(await self._extract_sportplus(content))
-                            else:
-                                # استخراج عام (لأي موقع)
-                                links.extend(await self._extract_generic(content))
-                            
-                            # 3. إذا لم نجد روابط، حاول البحث عن iframes
-                            if not links:
-                                iframe_links = await self._extract_iframes(content)
-                                for iframe_url in iframe_links:
-                                    # جلب محتوى الإطار
-                                    async with self.semaphore:
-                                        async with self.session.get(iframe_url, headers=headers) as iframe_response:
-                                            if iframe_response.status == 200:
-                                                iframe_content = await iframe_response.text()
-                                                links.extend(await self._extract_generic(iframe_content))
-                except Exception as e:
-                    logger.debug(f"⚠️ خطأ في {domain}: {e}")
-                    continue
-        except Exception as e:
-            logger.warning(f"⚠️ خطأ في البحث في الموقع: {e}")
-        
-        return links
-    
-    # ============================================================
-    # 📄 2. دوال استخراج خاصة بكل موقع
-    # ============================================================
-    
-    async def _extract_yacine(self, content):
-        """استخراج روابط من Yacine TV"""
-        links = []
-        soup = BeautifulSoup(content, 'html.parser')
-        
-        # البحث عن روابط البث في الصفحة
-        for script in soup.find_all('script'):
-            if script.string:
-                # البحث عن روابط M3U8 في JavaScript
-                pattern = r'(https?://[^\s"\']+\.m3u8[^\s"\']*)'
-                matches = re.findall(pattern, script.string, re.IGNORECASE)
-                links.extend(matches)
-        
-        # البحث في الروابط العادية
-        for link in soup.find_all('a', href=True):
-            href = link['href']
-            if '.m3u8' in href:
-                links.append(href)
-        
-        return links
-    
-    async def _extract_ostora(self, content):
-        """استخراج روابط من Ostora TV"""
-        # Ostora يستخدم نفس نمط Yacine
-        return await self._extract_yacine(content)
-    
-    async def _extract_yalla(self, content):
-        """استخراج روابط من Yalla Shoot"""
-        links = []
-        soup = BeautifulSoup(content, 'html.parser')
-        
-        # Yalla Shoot يضع البث في iframes غالباً
-        for iframe in soup.find_all('iframe', src=True):
-            src = iframe['src']
-            if src:
-                links.append(src)
-        
-        # البحث عن روابط مباشرة
-        pattern = r'(https?://[^\s"\']+\.m3u8[^\s"\']*)'
-        matches = re.findall(pattern, content, re.IGNORECASE)
-        links.extend(matches)
-        
-        return links
-    
-    async def _extract_general(self, content):
-        """استخراج روابط من General Pro"""
-        return await self._extract_yalla(content)
-    
-    async def _extract_koora(self, content):
-        """استخراج روابط من Koora Live"""
-        links = []
-        soup = BeautifulSoup(content, 'html.parser')
-        
-        # البحث عن روابط البث المضمنة
-        for script in soup.find_all('script'):
-            if script.string:
-                pattern = r'(https?://[^\s"\']+\.m3u8[^\s"\']*)'
-                matches = re.findall(pattern, script.string, re.IGNORECASE)
-                links.extend(matches)
-        
-        # البحث في iframes
-        for iframe in soup.find_all('iframe', src=True):
-            src = iframe['src']
-            if src and 'm3u8' in src:
-                links.append(src)
-        
-        return links
-    
-    async def _extract_beIN(self, content):
-        """استخراج روابط من BeIN Match"""
-        # BeIN Match قد يحتوي على روابط مشفرة
-        return await self._extract_generic(content)
-    
-    async def _extract_sportplus(self, content):
-        """استخراج روابط من Sport Plus"""
-        return await self._extract_generic(content)
-    
-    async def _extract_generic(self, content):
-        """استخراج روابط من أي صفحة"""
-        links = []
-        # البحث عن روابط M3U8
-        pattern = r'(https?://[^\s"\']+\.m3u8[^\s"\']*)'
-        matches = re.findall(pattern, content, re.IGNORECASE)
-        links.extend(matches)
-        
-        # البحث عن روابط بث أخرى
-        pattern2 = r'(https?://[^\s"\']+\.m3u[^\s"\']*)'
-        matches2 = re.findall(pattern2, content, re.IGNORECASE)
-        links.extend(matches2)
-        
-        return links
-    
-    async def _extract_iframes(self, content):
-        """استخراج روابط iframes من الصفحة"""
-        soup = BeautifulSoup(content, 'html.parser')
-        iframes = []
-        for iframe in soup.find_all('iframe', src=True):
-            src = iframe['src']
-            if src:
-                # تأكد من أن الرابط كامل
-                if src.startswith('//'):
-                    src = 'https:' + src
-                if src.startswith('/'):
-                    src = urljoin('https://' + self._get_domain(content), src)
-                iframes.append(src)
-        return iframes
-    
-    def _get_domain(self, content):
-        """استخراج النطاق من المحتوى (مساعدة)"""
-        # محاولة استخراج النطاق من المحتوى
-        match = re.search(r'https?://([^/]+)', content)
-        if match:
-            return match.group(1)
-        return 'example.com'
-    
-    # ============================================================
-    # 📡 3. البحث في قوائم M3U
+    # 📡 1. البحث في قوائم M3U
     # ============================================================
     
     async def _search_m3u(self, url, keywords):
-        """البحث في قائمة M3U"""
         try:
             if url in self.failed_links:
                 return []
@@ -376,11 +246,85 @@ class SiteHunter:
             return []
     
     # ============================================================
+    # 🌐 2. البحث في مواقع البث المباشر
+    # ============================================================
+    
+    async def _search_streaming_site(self, site, keywords):
+        """البحث في موقع بث مباشر"""
+        links = []
+        try:
+            for keyword in keywords[:3]:
+                # محاولة البحث في الموقع
+                search_url = f"{site}/search?q={quote_plus(keyword)}"
+                headers = self._get_headers()
+                async with self.semaphore:
+                    async with self.session.get(search_url, headers=headers) as response:
+                        if response.status == 200:
+                            content = await response.text()
+                            
+                            # استخراج روابط M3U8
+                            pattern = r'(https?://[^\s"\']+\.m3u8[^\s"\']*)'
+                            matches = re.findall(pattern, content, re.IGNORECASE)
+                            links.extend(matches)
+                            
+                            # استخراج روابط iframes
+                            iframe_pattern = r'<iframe[^>]+src=["\']([^"\']+)["\']'
+                            iframes = re.findall(iframe_pattern, content, re.IGNORECASE)
+                            for iframe in iframes:
+                                if iframe.startswith('//'):
+                                    iframe = 'https:' + iframe
+                                if iframe.startswith('/'):
+                                    iframe = urljoin(site, iframe)
+                                # جلب محتوى الإطار
+                                iframe_links = await self._fetch_iframe(iframe, keywords)
+                                links.extend(iframe_links)
+        except Exception as e:
+            logger.debug(f"⚠️ خطأ في {site}: {e}")
+        return links
+    
+    async def _fetch_iframe(self, iframe_url, keywords):
+        """جلب محتوى iframe واستخراج الروابط"""
+        links = []
+        try:
+            headers = self._get_headers()
+            async with self.semaphore:
+                async with self.session.get(iframe_url, headers=headers) as response:
+                    if response.status == 200:
+                        content = await response.text()
+                        pattern = r'(https?://[^\s"\']+\.m3u8[^\s"\']*)'
+                        matches = re.findall(pattern, content, re.IGNORECASE)
+                        links.extend(matches)
+        except:
+            pass
+        return links
+    
+    # ============================================================
+    # 📡 3. البحث في المنصات الرسمية
+    # ============================================================
+    
+    async def _search_official_site(self, site, keywords):
+        """البحث في المنصات الرسمية"""
+        links = []
+        try:
+            for keyword in keywords[:2]:
+                search_url = f"{site}/search?q={quote_plus(keyword)}"
+                headers = self._get_headers()
+                async with self.semaphore:
+                    async with self.session.get(search_url, headers=headers) as response:
+                        if response.status == 200:
+                            content = await response.text()
+                            pattern = r'(https?://[^\s"\']+\.m3u8[^\s"\']*)'
+                            matches = re.findall(pattern, content, re.IGNORECASE)
+                            links.extend(matches)
+        except:
+            pass
+        return links
+    
+    # ============================================================
     # 📡 4. البحث في تليجرام
     # ============================================================
     
     async def _search_telegram(self, keyword):
-        """البحث في قنوات تليجرام"""
         links = []
         for channel in self.telegram_sources[:3]:
             try:
@@ -400,11 +344,46 @@ class SiteHunter:
         return links
     
     # ============================================================
-    # 🧪 5. اختبار سريع للروابط
+    # 🌐 5. البحث في محركات البحث
+    # ============================================================
+    
+    async def _search_web(self, keyword):
+        try:
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                loop = asyncio.get_event_loop()
+                queries = [
+                    f'"{keyword}" m3u8 live',
+                    f'"{keyword}" iptv',
+                ]
+                tasks = [
+                    loop.run_in_executor(executor, self._search_google, q)
+                    for q in queries
+                ]
+                results = await asyncio.gather(*tasks)
+                all_links = []
+                for result in results:
+                    if result:
+                        all_links.extend(result)
+                return all_links
+        except:
+            return []
+    
+    def _search_google(self, query):
+        try:
+            from googlesearch import search
+            links = []
+            for url in search(query, num_results=3):
+                if '.m3u8' in url or '.m3u' in url:
+                    links.append(url)
+            return links
+        except:
+            return []
+    
+    # ============================================================
+    # 🧪 6. اختبار سريع للروابط
     # ============================================================
     
     async def _quick_validate(self, links):
-        """اختبار سريع باستخدام HEAD"""
         valid = []
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as session:
             for link in links:
@@ -418,37 +397,34 @@ class SiteHunter:
                             logger.info(f"✅ صالح: {link[:40]}...")
                         elif response.status == 403:
                             valid.append(link)
-                            logger.info(f"⚠️ محجوب (قد يعمل): {link[:40]}...")
+                            logger.info(f"⚠️ محجوب: {link[:40]}...")
                 except:
                     pass
         return valid
     
     # ============================================================
-    # 📊 6. ترتيب النتائج واختيار الأفضل
+    # 📊 7. ترتيب واختيار النتائج
     # ============================================================
     
     def _rank_links(self, links, query):
-        """ترتيب حسب الجودة والمصدر"""
         scored = []
         query_lower = query.lower()
-        quality_map = {'fhd': 10, '1080p': 10, '4k': 10, 'hd': 8, '720p': 8, 'sd': 5}
-        trusted = ['amagi.tv', 'akamaized.net', 'streamlock.net', 'sofast.tv', 'cloudfront.net', 'edgenextcdn.net']
         
         for link in links:
             score = 0
             link_lower = link.lower()
-            for key, val in quality_map.items():
-                if key in link_lower:
-                    score += val
-                    break
-            for domain in trusted:
+            
+            for domain in self.trusted_domains:
                 if domain in link_lower:
                     score += 10
                     break
+            
             if query_lower in link_lower:
                 score += 8
+            
             if link.startswith('https://'):
                 score += 3
+            
             scored.append((score, link))
         
         scored.sort(reverse=True, key=lambda x: x[0])
@@ -457,6 +433,7 @@ class SiteHunter:
     def _select_best(self, links, max_results):
         if len(links) <= max_results:
             return links
+        
         domains_seen = set()
         selected = []
         for link in links:
@@ -466,10 +443,11 @@ class SiteHunter:
                 domains_seen.add(domain)
             if len(selected) >= max_results:
                 break
+        
         return selected
     
     # ============================================================
-    # 🧠 7. توليد كلمات البحث الذكية
+    # 🧠 8. توليد كلمات البحث
     # ============================================================
     
     def _generate_keywords(self, channel_name):
@@ -508,7 +486,7 @@ class SiteHunter:
         return filtered
     
     # ============================================================
-    # 🛠️ 8. دوال مساعدة
+    # 🛠️ 9. دوال مساعدة
     # ============================================================
     
     def _get_headers(self):
