@@ -3,41 +3,34 @@ import aiohttp
 import re
 import time
 import random
-import json
 from urllib.parse import urlparse, quote_plus, urljoin
-from bs4 import BeautifulSoup
 import logging
-from rapidfuzz import fuzz, process
 
 logger = logging.getLogger(__name__)
 
 class MegaHunter:
     """
-    الصياد المتكامل - يجمع بين:
-    1. قوائم M3U الضخمة (أكثر من 50 مصدراً)
-    2. مواقع البث المباشر (Yacine, Ostora, Yalla Shoot, General Pro, Koora, BeIN)
-    3. قنوات تليجرام
-    4. محركات البحث
+    الصياد المتعدد المصادر - يجلب روابط متنوعة من أماكن مختلفة
     """
     
     def __init__(self):
         self.timeout = aiohttp.ClientTimeout(total=15)
         self.session = None
-        self.semaphore = asyncio.Semaphore(20)
+        self.semaphore = asyncio.Semaphore(15)
         self.failed_links = set()
         
         # ============================================================
-        # 🔥 1. قوائم M3U الضخمة (أكثر من 50 مصدراً)
+        # 🔥 1. قوائم M3U المتعددة (مصادر متنوعة)
         # ============================================================
         self.m3u_sources = [
-            # المصادر الرئيسية (أكثر من 20,000 قناة)
+            # المصادر الرئيسية
             'https://iptv-org.github.io/iptv/index.m3u',
             'https://iptv-org.github.io/iptv/index.nsfw.m3u',
             'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8',
             'https://raw.githubusercontent.com/iptv-hub/iptv-hub/main/playlist.m3u',
             'https://romaxa55.github.io/world_ip_tv/output/index.m3u',
             
-            # مستودعات GitHub (مصادر متعددة)
+            # مصادر من مستودعات مختلفة (كل منها يحتوي على قنوات مختلفة)
             'https://raw.githubusercontent.com/ismailozgul/iptv/main/playlist.m3u',
             'https://raw.githubusercontent.com/mhdzumair/IPTV/main/playlist.m3u',
             'https://raw.githubusercontent.com/azenv/IPTV/main/playlist.m3u',
@@ -47,87 +40,55 @@ class MegaHunter:
             'https://raw.githubusercontent.com/matthew1981/m3u/main/playlist.m3u',
             'https://raw.githubusercontent.com/kayleekay/iptv/main/playlist.m3u',
             'https://raw.githubusercontent.com/samirsam/iptv/main/playlist.m3u',
-            'https://raw.githubusercontent.com/billybonk/iptv/main/playlist.m3u',
-            'https://raw.githubusercontent.com/kingy444/iptv/main/playlist.m3u',
-            'https://raw.githubusercontent.com/MikiBzh/IPTV/main/playlist.m3u',
-            'https://raw.githubusercontent.com/sn7696/IPTV/main/playlist.m3u',
-            'https://raw.githubusercontent.com/nikooo777/iptv/main/playlist.m3u',
-            'https://raw.githubusercontent.com/junguler/m3u/main/playlist.m3u',
             
             # قوائم حسب الدول (مصادر إضافية)
             'https://iptv-org.github.io/iptv/countries/us.m3u',
             'https://iptv-org.github.io/iptv/countries/gb.m3u',
             'https://iptv-org.github.io/iptv/countries/fr.m3u',
             'https://iptv-org.github.io/iptv/countries/de.m3u',
-            'https://iptv-org.github.io/iptv/countries/it.m3u',
-            'https://iptv-org.github.io/iptv/countries/es.m3u',
-            'https://iptv-org.github.io/iptv/countries/tr.m3u',
+            'https://iptv-org.github.io/iptv/countries/qa.m3u',
             'https://iptv-org.github.io/iptv/countries/sa.m3u',
             'https://iptv-org.github.io/iptv/countries/ae.m3u',
-            'https://iptv-org.github.io/iptv/countries/qa.m3u',
             'https://iptv-org.github.io/iptv/countries/eg.m3u',
             'https://iptv-org.github.io/iptv/countries/tn.m3u',
-            'https://iptv-org.github.io/iptv/countries/ma.m3u',
-            'https://iptv-org.github.io/iptv/countries/dz.m3u',
-            'https://iptv-org.github.io/iptv/countries/jo.m3u',
-            'https://iptv-org.github.io/iptv/countries/lb.m3u',
-            'https://iptv-org.github.io/iptv/countries/kw.m3u',
-            'https://iptv-org.github.io/iptv/countries/om.m3u',
-            'https://iptv-org.github.io/iptv/countries/bh.m3u',
         ]
         
         # ============================================================
-        # 🌐 2. مواقع البث المباشر (التي قدمتها)
+        # 🌐 2. مواقع البث المباشر (لجلب روابط جديدة)
         # ============================================================
         self.streaming_sites = [
-            # Yacine TV
             'https://yacinetv.com',
             'https://yacinetv.live',
-            # Ostora TV
             'https://ostora.tv',
-            # Yalla Shoot (جميع النطاقات)
             'https://www.yallashoot.com',
             'https://www.yallashoot-live.com',
-            'https://www.yallashoot-new.com',
             'https://www.yallashoot-pro.com',
-            'https://www.yallashoot-plus.com',
-            'https://www.yallashoot-online.com',
-            'https://www.yallashoot-tv.com',
-            'https://www.yallashoot.net',
-            'https://www.yallashootlivetv.com',
-            # General Pro (جميع النطاقات)
             'https://generalpro.app',
             'https://generalpro.tv',
             'https://generalpro.live',
-            'https://generalprosports.com',
-            'https://generalprofootball.com',
-            'https://generalproapk.com',
-            'https://generalprohd.com',
-            'https://generalproplus.com',
-            'https://generalprostream.com',
-            'https://generalpromatch.com',
-            # Koora Live
             'https://www.koralive.com',
             'https://www.kooorastar.com',
-            # BeIN Match
             'https://www.beinmatch.com',
-            # Sport Plus
             'https://sportplustv.com',
             'https://livefootballtv.com',
+            'https://buffstreams.is',
+            'https://play.stream2watch.com',
+            'https://www.footybite.tv',
+            'https://www.vipleague.la',
         ]
         
         # ============================================================
-        # 📡 3. قنوات تليجرام
+        # 📡 3. قنوات تليجرام (مصادر متجددة)
         # ============================================================
         self.telegram_sources = [
             'iptv_links', 'm3u8_files', 'beIN_Sports_links',
             'live_tv_channels', 'IPTV442WEB', 'iptv_m3u',
             'm3u8_live', 'iptv_channels', 'free_iptv',
-            'iptv_playlist', 'm3u_streams', 'iptv_m3u8',
+            'iptv_playlist', 'm3u_streams',
         ]
         
         # ============================================================
-        # 📡 4. منصات رسمية
+        # 🌐 4. منصات رسمية (مصادر إضافية)
         # ============================================================
         self.official_sites = [
             'https://www.dazn.com',
@@ -135,57 +96,51 @@ class MegaHunter:
             'https://connect.beinsports.com',
             'https://www.skysports.com/watch',
             'https://www.espn.com/watch/',
-            'https://www.bbc.co.uk/iplayer',
-            'https://www.fifa.com/fifaplus/en',
-            'https://www.sonyliv.com',
-            'https://www.hotstar.com',
         ]
         
-        # ============================================================
-        # 🔍 إعدادات الجودة
-        # ============================================================
         self.trusted_domains = [
             'amagi.tv', 'akamaized.net', 'streamlock.net', 'sofast.tv',
-            'cloudfront.net', 'edgenextcdn.net', 'cdn3.wowza.com'
+            'cloudfront.net', 'edgenextcdn.net'
         ]
         
-        logger.info(f"🔥 تم تهيئة الصياد المتكامل مع:")
-        logger.info(f"  - {len(self.m3u_sources)} مصدر M3U")
-        logger.info(f"  - {len(self.streaming_sites)} موقع بث مباشر")
-        logger.info(f"  - {len(self.telegram_sources)} قناة تليجرام")
+        logger.info(f"🔥 تم تهيئة الصياد المتعدد المصادر")
     
     # ============================================================
     # 🎯 الوظيفة الرئيسية
     # ============================================================
     
     async def hunt(self, channel_name, max_results=10):
-        """الصيد المتكامل"""
+        """الصيد المتعدد المصادر"""
         logger.info(f"🔍 بدء الصيد عن: {channel_name}")
         start_time = time.time()
         all_links = []
         
+        # توليد كلمات بحث متعددة
         keywords = self._generate_keywords(channel_name)
         logger.info(f"📝 كلمات البحث: {keywords}")
         
         async with aiohttp.ClientSession(timeout=self.timeout) as session:
             self.session = session
             
-            # 1. البحث في قوائم M3U
-            tasks = [self._search_m3u(url, keywords) for url in self.m3u_sources[:15]]
+            tasks = []
+            
+            # 1. البحث في قوائم M3U المختلفة
+            for url in self.m3u_sources[:15]:
+                tasks.append(self._search_m3u(url, keywords))
             
             # 2. البحث في مواقع البث المباشر
             for site in self.streaming_sites[:10]:
                 tasks.append(self._search_streaming_site(site, keywords))
             
-            # 3. البحث في قنوات تليجرام
+            # 3. البحث في تليجرام
             for keyword in keywords[:3]:
                 tasks.append(self._search_telegram(keyword))
             
             # 4. البحث في المنصات الرسمية
-            for site in self.official_sites[:5]:
+            for site in self.official_sites[:3]:
                 tasks.append(self._search_official_site(site, keywords))
             
-            # 5. البحث في محركات البحث
+            # 5. البحث في محركات البحث (لجلب روابط جديدة)
             tasks.append(self._search_web(keywords[0] if keywords else channel_name))
             
             # تنفيذ المهام بالتوازي
@@ -208,7 +163,7 @@ class MegaHunter:
         logger.info("🧪 جاري التحقق من الروابط...")
         validated = await self._quick_validate(ranked_links[:20])
         
-        # اختيار أفضل النتائج
+        # اختيار أفضل النتائج مع تنوع المصادر
         final = self._select_best(validated, max_results)
         
         elapsed = time.time() - start_time
@@ -250,63 +205,9 @@ class MegaHunter:
     # ============================================================
     
     async def _search_streaming_site(self, site, keywords):
-        """البحث في موقع بث مباشر"""
         links = []
         try:
             for keyword in keywords[:3]:
-                # محاولة البحث في الموقع
-                search_url = f"{site}/search?q={quote_plus(keyword)}"
-                headers = self._get_headers()
-                async with self.semaphore:
-                    async with self.session.get(search_url, headers=headers) as response:
-                        if response.status == 200:
-                            content = await response.text()
-                            
-                            # استخراج روابط M3U8
-                            pattern = r'(https?://[^\s"\']+\.m3u8[^\s"\']*)'
-                            matches = re.findall(pattern, content, re.IGNORECASE)
-                            links.extend(matches)
-                            
-                            # استخراج روابط iframes
-                            iframe_pattern = r'<iframe[^>]+src=["\']([^"\']+)["\']'
-                            iframes = re.findall(iframe_pattern, content, re.IGNORECASE)
-                            for iframe in iframes:
-                                if iframe.startswith('//'):
-                                    iframe = 'https:' + iframe
-                                if iframe.startswith('/'):
-                                    iframe = urljoin(site, iframe)
-                                # جلب محتوى الإطار
-                                iframe_links = await self._fetch_iframe(iframe, keywords)
-                                links.extend(iframe_links)
-        except Exception as e:
-            logger.debug(f"⚠️ خطأ في {site}: {e}")
-        return links
-    
-    async def _fetch_iframe(self, iframe_url, keywords):
-        """جلب محتوى iframe واستخراج الروابط"""
-        links = []
-        try:
-            headers = self._get_headers()
-            async with self.semaphore:
-                async with self.session.get(iframe_url, headers=headers) as response:
-                    if response.status == 200:
-                        content = await response.text()
-                        pattern = r'(https?://[^\s"\']+\.m3u8[^\s"\']*)'
-                        matches = re.findall(pattern, content, re.IGNORECASE)
-                        links.extend(matches)
-        except:
-            pass
-        return links
-    
-    # ============================================================
-    # 📡 3. البحث في المنصات الرسمية
-    # ============================================================
-    
-    async def _search_official_site(self, site, keywords):
-        """البحث في المنصات الرسمية"""
-        links = []
-        try:
-            for keyword in keywords[:2]:
                 search_url = f"{site}/search?q={quote_plus(keyword)}"
                 headers = self._get_headers()
                 async with self.semaphore:
@@ -321,7 +222,7 @@ class MegaHunter:
         return links
     
     # ============================================================
-    # 📡 4. البحث في تليجرام
+    # 📡 3. البحث في تليجرام
     # ============================================================
     
     async def _search_telegram(self, keyword):
@@ -344,7 +245,7 @@ class MegaHunter:
         return links
     
     # ============================================================
-    # 🌐 5. البحث في محركات البحث
+    # 🌐 4. البحث في محركات البحث
     # ============================================================
     
     async def _search_web(self, keyword):
@@ -353,7 +254,7 @@ class MegaHunter:
                 loop = asyncio.get_event_loop()
                 queries = [
                     f'"{keyword}" m3u8 live',
-                    f'"{keyword}" iptv',
+                    f'"{keyword}" iptv link',
                 ]
                 tasks = [
                     loop.run_in_executor(executor, self._search_google, q)
@@ -379,8 +280,25 @@ class MegaHunter:
         except:
             return []
     
+    async def _search_official_site(self, site, keywords):
+        links = []
+        try:
+            for keyword in keywords[:2]:
+                search_url = f"{site}/search?q={quote_plus(keyword)}"
+                headers = self._get_headers()
+                async with self.semaphore:
+                    async with self.session.get(search_url, headers=headers) as response:
+                        if response.status == 200:
+                            content = await response.text()
+                            pattern = r'(https?://[^\s"\']+\.m3u8[^\s"\']*)'
+                            matches = re.findall(pattern, content, re.IGNORECASE)
+                            links.extend(matches)
+        except:
+            pass
+        return links
+    
     # ============================================================
-    # 🧪 6. اختبار سريع للروابط
+    # 🧪 5. اختبار سريع للروابط
     # ============================================================
     
     async def _quick_validate(self, links):
@@ -403,7 +321,7 @@ class MegaHunter:
         return valid
     
     # ============================================================
-    # 📊 7. ترتيب واختيار النتائج
+    # 📊 6. ترتيب النتائج
     # ============================================================
     
     def _rank_links(self, links, query):
@@ -447,31 +365,34 @@ class MegaHunter:
         return selected
     
     # ============================================================
-    # 🧠 8. توليد كلمات البحث
+    # 🧠 7. توليد كلمات البحث المتعددة
     # ============================================================
     
     def _generate_keywords(self, channel_name):
         keywords = [channel_name]
         name = channel_name.lower().strip()
         
+        # إزالة الأرقام
         no_numbers = re.sub(r'\d+', '', name).strip()
         if no_numbers and no_numbers != name:
             keywords.append(no_numbers)
         
+        # إزالة الكلمات الإضافية
         for word in ['hd', 'fhd', 'uhd', '4k', 'tv', 'channel']:
             if word in name:
                 keywords.append(name.replace(word, '').strip())
         
+        # أسماء بديلة معروفة (لتنويع النتائج)
         if 'mbc' in name:
-            keywords.extend(['mbc1', 'mbc 1 hd', 'mbc one'])
+            keywords.extend(['mbc1', 'mbc 1 hd', 'mbc one', 'mbc live'])
         if 'bein' in name:
-            keywords.extend(['beIN', 'beIN 1', 'beIN HD', 'beIN Sports'])
+            keywords.extend(['beIN', 'beIN 1', 'beIN HD', 'beIN Sports', 'beIN live'])
         if 'aljazeera' in name:
-            keywords.extend(['al jazeera', 'aljazeera', 'الجزيرة'])
+            keywords.extend(['al jazeera', 'aljazeera', 'الجزيرة', 'aljazeera live'])
         if 'cnn' in name:
-            keywords.extend(['CNN', 'cnn live'])
+            keywords.extend(['CNN', 'cnn live', 'cnn international'])
         if 'bbc' in name:
-            keywords.extend(['BBC', 'bbc live'])
+            keywords.extend(['BBC', 'bbc live', 'bbc news'])
         
         return list(set(keywords))[:8]
     
@@ -486,7 +407,7 @@ class MegaHunter:
         return filtered
     
     # ============================================================
-    # 🛠️ 9. دوال مساعدة
+    # 🛠️ 8. دوال مساعدة
     # ============================================================
     
     def _get_headers(self):
@@ -494,6 +415,7 @@ class MegaHunter:
             'User-Agent': random.choice([
                 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             ]),
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
             'Accept-Language': 'en-US,en;q=0.9,ar;q=0.8',
