@@ -4,14 +4,16 @@ import requests
 from proxy import SmartProxy
 from config import Config
 from channels import COUNTRY_CHANNELS, SPORTS_CHANNELS
+import logging
 
 app = Flask(__name__)
 CORS(app)
 
-# تهيئة البروكسي
-proxy = SmartProxy()
+# إعداد التسجيل
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# قائمة الدول
+proxy = SmartProxy()
 COUNTRIES = {code: data['name'] for code, data in COUNTRY_CHANNELS.items()}
 
 @app.route('/')
@@ -46,7 +48,7 @@ def index():
 @app.route('/channel/<channel_name>')
 def stream_channel(channel_name):
     """بث قناة مباشرة"""
-    print(f"📺 طلب بث: {channel_name}")
+    logger.info(f"📺 طلب بث: {channel_name}")
     
     stream = proxy.get_stream(channel_name)
     
@@ -62,12 +64,11 @@ def stream_channel(channel_name):
 @app.route('/search/<channel_name>')
 def search_channel(channel_name):
     """البحث عن قناة"""
-    print(f"🔍 طلب بحث: {channel_name}")
+    logger.info(f"🔍 طلب بحث: {channel_name}")
     
     links = proxy.searcher.search_channel(channel_name)
     
     if links:
-        # حفظ في الكاش
         proxy.cache.set(channel_name, links)
         return jsonify({
             'found': True,
@@ -89,30 +90,24 @@ def country_playlist(country_code):
         return jsonify({'error': 'دولة غير مدعومة'}), 404
     
     try:
-        # جلب قائمة القنوات من الكاش أو من المصدر
-        channels = proxy.get_channels_by_country(country_code)
+        # جلب القائمة من iptv-org
+        url = f"https://iptv-org.github.io/iptv/countries/{country_code}.m3u"
+        response = requests.get(url, timeout=15)
         
-        if not channels:
-            return jsonify({'error': 'لا توجد قنوات لهذه الدولة'}), 404
-        
-        # إنشاء ملف M3U
-        m3u_content = "#EXTM3U\n"
-        for name, url in channels.items():
-            m3u_content += f'#EXTINF:-1,{name}\n'
-            m3u_content += f'{url}\n'
-        
-        return Response(
-            m3u_content,
-            status=200,
-            content_type='application/vnd.apple.mpegurl',
-            headers={'Access-Control-Allow-Origin': '*'}
-        )
+        if response.status_code == 200:
+            return Response(
+                response.text,
+                status=200,
+                content_type='application/vnd.apple.mpegurl',
+                headers={'Access-Control-Allow-Origin': '*'}
+            )
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"❌ خطأ في جلب القائمة: {e}")
+    
+    return jsonify({'error': 'فشل في جلب قائمة القنوات'}), 500
 
 @app.route('/countries')
 def list_countries():
-    """قائمة الدول المدعومة"""
     return jsonify({
         'countries': COUNTRIES,
         'count': len(COUNTRIES)
@@ -120,7 +115,6 @@ def list_countries():
 
 @app.route('/sports')
 def list_sports_channels():
-    """قائمة القنوات الرياضية"""
     return jsonify({
         'channels': SPORTS_CHANNELS,
         'count': len(SPORTS_CHANNELS)
@@ -128,17 +122,14 @@ def list_sports_channels():
 
 @app.route('/all_channels')
 def list_all_channels():
-    """جميع القنوات المسبقة"""
     all_channels = {}
     
-    # إضافة قنوات الدول
     for country_code, data in COUNTRY_CHANNELS.items():
         all_channels[country_code] = {
             'country': data['name'],
             'channels': data['channels']
         }
     
-    # إضافة القنوات الرياضية
     all_channels['sports'] = {
         'country': 'رياضة',
         'channels': SPORTS_CHANNELS
@@ -146,29 +137,10 @@ def list_all_channels():
     
     return jsonify(all_channels)
 
-@app.route('/channel', methods=['POST'])
-def add_channel():
-    """إضافة قناة جديدة"""
-    data = request.json
-    
-    if not data or 'name' not in data or 'url' not in data:
-        return jsonify({'error': 'يجب توفير name و url'}), 400
-    
-    success = proxy.add_channel(data['name'], data['url'])
-    
-    return jsonify({
-        'success': success,
-        'channel': data['name'],
-        'url': data['url']
-    })
-
 if __name__ == '__main__':
     print("🐍 Hydra IPTV Server v2.0")
     print("=" * 50)
     print(f"✅ السيرفر يعمل على: http://localhost:{Config.PORT}")
-    print(f"📺 مثال: http://localhost:{Config.PORT}/channel/beIN%20Sports%201")
-    print(f"🔍 بحث: http://localhost:{Config.PORT}/search/beIN%20Sports")
-    print(f"📋 قائمة الدول: http://localhost:{Config.PORT}/countries")
     print("=" * 50)
     
     app.run(
