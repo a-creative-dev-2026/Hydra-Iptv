@@ -222,7 +222,7 @@ def merge_playlists(iptv_org, local):
 # ============================================================
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 10000))
+    port = int(os.environ.get('PORT', 5000))
     print("🐍 Hydra IPTV Server v3.0")
     print("=" * 60)
     print(f"✅ السيرفر يعمل على: http://0.0.0.0:{port}")
