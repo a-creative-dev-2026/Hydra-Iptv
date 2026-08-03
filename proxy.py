@@ -1,6 +1,5 @@
 import requests
 from flask import Response, stream_with_context
-import time
 from cache import Cache
 from searcher import ChannelSearcher
 from channels import COUNTRY_CHANNELS, SPORTS_CHANNELS
@@ -43,23 +42,27 @@ class SmartProxy:
     
     def get_stream(self, channel_name):
         """الحصول على تيار البث"""
-        # 1. البحث في الكاش (الروابط المسبقة)
+        # 1. البحث في الكاش
         cached_links = self.cache.get(channel_name)
         if cached_links:
-            # اختبار الروابط المخزنة
+            print(f"📦 تم العثور على {len(cached_links)} رابط في الكاش")
             for link in cached_links:
                 if self._test_link(link):
+                    print(f"✅ رابط يعمل: {link[:50]}...")
                     return self._proxy_link(link)
+                else:
+                    print(f"❌ رابط لا يعمل: {link[:50]}...")
         
         # 2. البحث عن روابط جديدة
-        print(f"🔍 لم يتم العثور على {channel_name} في الكاش، جاري البحث...")
+        print(f"🔍 لم يتم العثور على {channel_name} في الكاش، جاري البحث العميق...")
         links = self.searcher.search_channel(channel_name)
         
         if links:
-            # حفظ في الكاش
+            print(f"✅ تم العثور على {len(links)} رابط جديد!")
             self.cache.set(channel_name, links)
             return self._proxy_link(links[0])
         
+        print(f"❌ لم يتم العثور على روابط لـ {channel_name}")
         return None
     
     def _test_link(self, url):
@@ -88,18 +91,3 @@ class SmartProxy:
         except Exception as e:
             print(f"❌ خطأ في البروكسي: {e}")
             return None
-    
-    def add_channel(self, channel_name, url):
-        """إضافة قناة يدوياً"""
-        links = self.cache.get(channel_name) or []
-        if url not in links:
-            links.append(url)
-            self.cache.set(channel_name, links)
-            return True
-        return False
-    
-    def get_channels_by_country(self, country_code):
-        """الحصول على قنوات دولة معينة"""
-        if country_code in COUNTRY_CHANNELS:
-            return COUNTRY_CHANNELS[country_code]['channels']
-        return None
