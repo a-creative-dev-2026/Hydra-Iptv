@@ -1,13 +1,13 @@
 import asyncio
-from hunter import SiteHunter
+from hunter import MegaHunter
 import logging
 
 logger = logging.getLogger(__name__)
 
 class ChannelSearcher:
     def __init__(self):
-        self.hunter = SiteHunter()
-        logger.info("✅ تم تهيئة صياد المواقع")
+        self.hunter = MegaHunter()
+        logger.info("✅ تم تهيئة الصياد المتكامل")
     
     def search_channel(self, channel_name, country=None):
         logger.info(f"🔍 بدء البحث عن: {channel_name}")
