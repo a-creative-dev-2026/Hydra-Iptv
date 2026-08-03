@@ -128,7 +128,7 @@ async def stats():
     }
 
 if __name__ == "__main__":
-    # Force port 5000 as expected by Render's current configuration
+    # Use the PORT environment variable provided by the platform, or default to 5000
     port = int(os.environ.get("PORT", 5000))
-    logger.info(f"Starting server on port {port}")
+    logger.info(f"Starting Hydra IPTV on port {port}")
     uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")
