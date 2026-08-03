@@ -2,7 +2,7 @@ import os
 
 class Config:
     HOST = os.getenv('HOST', '0.0.0.0')
-    PORT = int(os.getenv('PORT', 5000))
+    PORT = int(os.getenv('PORT', 10000))  # القيمة الافتراضية 10000
     DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
     
     TIMEOUT = int(os.getenv('TIMEOUT', 10))
