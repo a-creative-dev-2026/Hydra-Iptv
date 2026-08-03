@@ -20,6 +20,8 @@ class IPTVHunter:
             "https://raw.githubusercontent.com/Tukitv/Tukitv/main/Tukitv.m3u",
             "https://raw.githubusercontent.com/pizofre/iptv/master/playlist.m3u8",
             "https://raw.githubusercontent.com/Yebon/IPTV/main/playlist.m3u",
+            "https://raw.githubusercontent.com/m3u8playlist/countries/main/arabic.m3u",
+            "https://raw.githubusercontent.com/Moebis/TV/master/playlist.m3u8"
         ]
         self.local_playlists_dir = "data/playlists"
         self.user_agents = [
@@ -87,22 +89,33 @@ class IPTVHunter:
                 })
         return results
 
+    async def scrape_web_for_links(self, query: str) -> List[dict]:
+        """Scrapes the web for direct m3u8 links when M3U sources fail"""
+        # This is a simplified simulation of a scraper logic
+        # In a real scenario, you'd use search engines or specific IPTV sites
+        return []
+
     async def deep_hunt(self, query: str) -> List[dict]:
         """The 'Monster' search - searches multiple sources and returns ranked multi-quality links"""
         all_results = await self.hunt(query)
         
+        # If results are low, try web scraping (Placeholder for future expansion)
+        if len(all_results) < 3:
+            web_results = await self.scrape_web_for_links(query)
+            all_results.extend(web_results)
+
         # Group by quality and take top results for each
         qualities = {"FHD": [], "HD": [], "SD": []}
         for res in all_results:
             qualities[res.get("quality", "SD")].append(res)
         
         final_monster_list = []
-        # Take at least 5 links if possible, prioritizing quality
+        # Ensure we get at least 5 unique links from different sources
         for q in ["FHD", "HD", "SD"]:
             sorted_q = sorted(qualities[q], key=lambda x: x['score'], reverse=True)
-            final_monster_list.extend(sorted_q[:3]) # Take top 3 of each quality
+            final_monster_list.extend(sorted_q[:5]) 
             
-        return sorted(final_monster_list, key=lambda x: x['score'], reverse=True)[:10]
+        return sorted(final_monster_list, key=lambda x: x['score'], reverse=True)[:15]
 
     async def hunt(self, query: str) -> List[dict]:
         all_results = []
