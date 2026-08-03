@@ -10,11 +10,7 @@ logger = logging.getLogger(__name__)
 
 class StableHunter:
     """
-    الصياد المستقر - يعتمد فقط على المصادر الموثوقة
-    - قوائم M3U المعروفة (iptv-org, GitHub)
-    - لا يعتمد على سكرابينج مواقع (غير موثوق)
-    - لا يعتمد على تليجرام (غير مستقر)
-    - لا يعتمد على منصات مدفوعة (مستحيل)
+    الصياد المستقر - بحث عام عن أي قناة يطلبها المستخدم
     """
     
     def __init__(self):
@@ -24,22 +20,17 @@ class StableHunter:
         self.failed_links = set()
         
         # ============================================================
-        # 🔥 المصادر الموثوقة فقط (قوائم M3U المعروفة)
+        # 🔥 المصادر الموثوقة (قوائم M3U المعروفة)
         # ============================================================
         self.m3u_sources = [
-            # المصدر الرئيسي (أكثر من 20,000 قناة)
             'https://iptv-org.github.io/iptv/index.m3u',
             'https://iptv-org.github.io/iptv/index.nsfw.m3u',
-            
-            # مستودعات GitHub الموثوقة
             'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8',
             'https://raw.githubusercontent.com/iptv-hub/iptv-hub/main/playlist.m3u',
             'https://romaxa55.github.io/world_ip_tv/output/index.m3u',
             'https://raw.githubusercontent.com/ismailozgul/iptv/main/playlist.m3u',
             'https://raw.githubusercontent.com/mhdzumair/IPTV/main/playlist.m3u',
             'https://raw.githubusercontent.com/azenv/IPTV/main/playlist.m3u',
-            
-            # قوائم حسب الدول (مصادر إضافية)
             'https://iptv-org.github.io/iptv/countries/us.m3u',
             'https://iptv-org.github.io/iptv/countries/gb.m3u',
             'https://iptv-org.github.io/iptv/countries/fr.m3u',
@@ -56,9 +47,6 @@ class StableHunter:
             'https://iptv-org.github.io/iptv/countries/kw.m3u',
         ]
         
-        # ============================================================
-        # 🔥 قوائم التصنيفات (مصادر موثوقة)
-        # ============================================================
         self.category_sources = [
             'https://iptv-org.github.io/iptv/categories/news.m3u',
             'https://iptv-org.github.io/iptv/categories/sports.m3u',
@@ -68,34 +56,30 @@ class StableHunter:
             'https://iptv-org.github.io/iptv/categories/music.m3u',
         ]
         
-        # ============================================================
-        # 🔍 إعدادات الجودة
-        # ============================================================
         self.trusted_domains = [
             'amagi.tv', 'akamaized.net', 'streamlock.net', 'sofast.tv',
             'cloudfront.net', 'edgenextcdn.net'
         ]
         
-        logger.info(f"🔥 تم تهيئة الصياد المستقر مع {len(self.m3u_sources)} مصدراً موثوقاً")
+        logger.info(f"🔥 تم تهيئة الصياد للبحث العام مع {len(self.m3u_sources)} مصدراً")
     
     # ============================================================
-    # 🎯 الوظيفة الرئيسية
+    # 🎯 الوظيفة الرئيسية - بحث عام
     # ============================================================
     
     async def hunt(self, channel_name, max_results=10):
-        """الصيد من المصادر الموثوقة فقط"""
-        logger.info(f"🔍 بدء البحث عن: {channel_name}")
+        """بحث عام عن أي قناة يطلبها المستخدم"""
+        logger.info(f"🔍 بدء البحث العام عن: {channel_name}")
         start_time = time.time()
         all_links = []
         
-        # توليد كلمات البحث
+        # توليد كلمات بحث متعددة بناءً على اسم القناة
         keywords = self._generate_keywords(channel_name)
         logger.info(f"📝 كلمات البحث: {keywords}")
         
         async with aiohttp.ClientSession(timeout=self.timeout) as session:
             self.session = session
             
-            # البحث في جميع القوائم بالتوازي
             tasks = []
             for url in self.m3u_sources:
                 tasks.append(self._search_m3u(url, keywords))
@@ -103,7 +87,6 @@ class StableHunter:
             for url in self.category_sources:
                 tasks.append(self._search_m3u(url, keywords))
             
-            # تنفيذ المهام
             results = await asyncio.gather(*tasks, return_exceptions=True)
             
             for result in results:
@@ -114,16 +97,13 @@ class StableHunter:
                 elif isinstance(result, Exception):
                     logger.debug(f"⚠️ خطأ: {str(result)[:50]}")
         
-        # تنقية وترتيب النتائج
         unique_links = self._deduplicate(all_links)
         filtered_links = self._filter_by_keywords(unique_links, keywords)
         ranked_links = self._rank_links(filtered_links, channel_name)
         
-        # التحقق من الروابط (طريقة محسنة)
         logger.info("🧪 جاري التحقق من الروابط...")
         validated = await self._validate_links(ranked_links[:20])
         
-        # اختيار أفضل النتائج
         final = self._select_best(validated, max_results)
         
         elapsed = time.time() - start_time
@@ -131,11 +111,10 @@ class StableHunter:
         return final
     
     # ============================================================
-    # 📡 البحث في قائمة M3U (بـ Regex محسّن)
+    # 📡 البحث في قوائم M3U
     # ============================================================
     
     async def _search_m3u(self, url, keywords):
-        """البحث في قائمة M3U باستخدام Regex محسّن"""
         try:
             if url in self.failed_links:
                 return []
@@ -155,11 +134,10 @@ class StableHunter:
                     content = await response.text()
                     links = []
                     
-                    # ✅ Regex محسّن يلتقط جميع أشكال #EXTINF
+                    # ✅ بحث عام عن أي قناة
                     pattern = r'#EXTINF:[^\n]*,([^\n]*)\n(https?://[^\s]+)'
                     matches = re.findall(pattern, content, re.IGNORECASE)
                     
-                    # فلترة النتائج حسب الكلمات المفتاحية
                     for name, url_link in matches:
                         name_lower = name.lower()
                         for keyword in keywords:
@@ -174,11 +152,10 @@ class StableHunter:
             return []
     
     # ============================================================
-    # 🧪 التحقق من الروابط (طريقة محسّنة)
+    # 🧪 التحقق من الروابط
     # ============================================================
     
     async def _validate_links(self, links):
-        """التحقق من الروابط باستخدام GET مع التحقق من Content-Type"""
         valid = []
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=8)) as session:
             for link in links:
@@ -191,16 +168,13 @@ class StableHunter:
                         'Accept-Language': 'en-US,en;q=0.9,ar;q=0.8',
                     }
                     
-                    # ✅ استخدام GET مع التحقق من Content-Type
                     async with session.get(link, headers=headers, allow_redirects=True) as response:
                         if response.status in (200, 206):
                             content_type = response.headers.get('Content-Type', '').lower()
-                            # التحقق من أن المحتوى هو mpegurl أو m3u8
                             if 'mpegurl' in content_type or 'm3u8' in content_type or 'application/vnd.apple.mpegurl' in content_type:
                                 valid.append(link)
                                 logger.info(f"✅ صالح: {link[:40]}...")
                             else:
-                                # محاولة قراءة أول بضعة كيلوبايت للتأكد
                                 try:
                                     chunk = await response.content.read(1024)
                                     if b'#EXTM3U' in chunk or b'#EXTINF' in chunk:
@@ -208,67 +182,16 @@ class StableHunter:
                                         logger.info(f"✅ صالح (M3U): {link[:40]}...")
                                 except:
                                     pass
-                except Exception as e:
-                    logger.debug(f"⚠️ فشل: {link[:40]}... - {str(e)[:20]}")
+                except:
                     continue
         return valid
     
     # ============================================================
-    # 📊 ترتيب النتائج
-    # ============================================================
-    
-    def _rank_links(self, links, query):
-        """ترتيب الروابط حسب الجودة"""
-        scored = []
-        query_lower = query.lower()
-        
-        for link in links:
-            score = 0
-            link_lower = link.lower()
-            
-            # مصادر موثوقة
-            for domain in self.trusted_domains:
-                if domain in link_lower:
-                    score += 10
-                    break
-            
-            # تطابق الاسم
-            if query_lower in link_lower:
-                score += 8
-            
-            # HTTPS
-            if link.startswith('https://'):
-                score += 3
-            
-            scored.append((score, link))
-        
-        scored.sort(reverse=True, key=lambda x: x[0])
-        return [link for _, link in scored]
-    
-    def _select_best(self, links, max_results):
-        """اختيار أفضل النتائج"""
-        if len(links) <= max_results:
-            return links
-        
-        # تنويع المصادر
-        domains_seen = set()
-        selected = []
-        for link in links:
-            domain = urlparse(link).netloc
-            if domain not in domains_seen or len(selected) < 3:
-                selected.append(link)
-                domains_seen.add(domain)
-            if len(selected) >= max_results:
-                break
-        
-        return selected
-    
-    # ============================================================
-    # 🧠 توليد كلمات البحث
+    # 🧠 توليد كلمات البحث العامة
     # ============================================================
     
     def _generate_keywords(self, channel_name):
-        """توليد كلمات بحث متعددة"""
+        """توليد كلمات بحث متعددة لأي قناة"""
         keywords = [channel_name]
         name = channel_name.lower().strip()
         
@@ -282,22 +205,66 @@ class StableHunter:
             if word in name:
                 keywords.append(name.replace(word, '').strip())
         
-        # أسماء بديلة
-        if 'mbc' in name:
-            keywords.extend(['mbc1', 'mbc 1 hd', 'mbc one'])
-        if 'bein' in name:
-            keywords.extend(['beIN', 'beIN 1', 'beIN HD', 'beIN Sports'])
-        if 'aljazeera' in name:
-            keywords.extend(['al jazeera', 'aljazeera', 'الجزيرة'])
-        if 'cnn' in name:
-            keywords.extend(['CNN', 'cnn live'])
-        if 'bbc' in name:
-            keywords.extend(['BBC', 'bbc live'])
+        # ✅ أسماء بديلة عامة (لأي قناة)
+        # يتم استبدال الأرقام بالكلمات
+        if '1' in name:
+            keywords.append(name.replace('1', 'one'))
+        if '2' in name:
+            keywords.append(name.replace('2', 'two'))
+        if '3' in name:
+            keywords.append(name.replace('3', 'three'))
         
-        return list(set(keywords))[:6]
+        # ✅ إضافة صيغ مختلفة
+        keywords.append(f"{name} live")
+        keywords.append(f"{name} stream")
+        
+        return list(set(keywords))[:8]
+    
+    # ============================================================
+    # 📊 ترتيب النتائج
+    # ============================================================
+    
+    def _rank_links(self, links, query):
+        scored = []
+        query_lower = query.lower()
+        
+        for link in links:
+            score = 0
+            link_lower = link.lower()
+            
+            for domain in self.trusted_domains:
+                if domain in link_lower:
+                    score += 10
+                    break
+            
+            if query_lower in link_lower:
+                score += 8
+            
+            if link.startswith('https://'):
+                score += 3
+            
+            scored.append((score, link))
+        
+        scored.sort(reverse=True, key=lambda x: x[0])
+        return [link for _, link in scored]
+    
+    def _select_best(self, links, max_results):
+        if len(links) <= max_results:
+            return links
+        
+        domains_seen = set()
+        selected = []
+        for link in links:
+            domain = urlparse(link).netloc
+            if domain not in domains_seen or len(selected) < 3:
+                selected.append(link)
+                domains_seen.add(domain)
+            if len(selected) >= max_results:
+                break
+        
+        return selected
     
     def _filter_by_keywords(self, links, keywords):
-        """تصفية الروابط حسب الكلمات المفتاحية"""
         filtered = []
         for link in links:
             link_lower = link.lower()
@@ -308,7 +275,6 @@ class StableHunter:
         return filtered
     
     def _deduplicate(self, links):
-        """إزالة التكرار"""
         seen = set()
         unique = []
         for link in links:
