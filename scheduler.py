@@ -1,12 +1,19 @@
-from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.interval import IntervalTrigger
 import time
 import logging
 from cache import Cache
-from proxy import SmartProxy
 import requests
 
 logger = logging.getLogger(__name__)
+
+# ✅ محاولة استيراد APScheduler، إذا لم يكن موجوداً نعطي رسالة
+try:
+    from apscheduler.schedulers.background import BackgroundScheduler
+    from apscheduler.triggers.interval import IntervalTrigger
+    APSCHEDULER_AVAILABLE = True
+except ImportError:
+    APSCHEDULER_AVAILABLE = False
+    BackgroundScheduler = None
+    IntervalTrigger = None
 
 class LinkValidator:
     def __init__(self):
@@ -18,10 +25,7 @@ class LinkValidator:
         })
     
     def validate_all_links(self):
-        """التحقق من جميع الروابط في الكاش وإزالة التالفة"""
         logger.info("🔄 بدء التحقق الدوري من الروابط...")
-        
-        # الحصول على نسخة من الكاش
         cache_data = self.cache.get_all()
         removed_count = 0
         
@@ -30,7 +34,6 @@ class LinkValidator:
             if not links:
                 continue
             
-            # اختبار الروابط
             valid_links = []
             for link in links:
                 if self._test_link(link):
@@ -39,7 +42,6 @@ class LinkValidator:
                     logger.info(f"❌ رابط تالف تمت إزالته: {link[:50]}...")
                     removed_count += 1
             
-            # تحديث الكاش بالروابط الصالحة فقط
             if valid_links:
                 self.cache.set(channel_name, valid_links)
             else:
@@ -49,43 +51,37 @@ class LinkValidator:
         logger.info(f"✅ تم الانتهاء من التحقق. تمت إزالة {removed_count} رابط تالف.")
     
     def _test_link(self, url):
-        """اختبار الرابط (تحميل أول 1024 بايت)"""
         try:
             headers = {'Range': 'bytes=0-1024'}
             response = self.session.get(url, headers=headers, timeout=10, stream=True)
-            
             if response.status_code not in [200, 206, 302, 301]:
                 return False
-            
-            # التحقق من المحتوى (ليس HTML)
             content = response.raw.read(1024)
             if b'<html' in content or b'<body' in content:
                 return False
-            
             return True
         except:
             return False
 
 def start_scheduler():
-    """بدء تشغيل المجدول"""
+    """بدء تشغيل المجدول (إذا كانت المكتبة متوفرة)"""
+    if not APSCHEDULER_AVAILABLE:
+        logger.warning("⚠️ APScheduler غير مثبت، لن يتم تشغيل المجدول الدوري")
+        return None
+    
     validator = LinkValidator()
-    
-    # إنشاء المجدول
     scheduler = BackgroundScheduler()
-    
-    # إضافة مهمة دورية (كل 6 ساعات)
     scheduler.add_job(
         validator.validate_all_links,
         trigger=IntervalTrigger(hours=6),
         id='validate_links',
         replace_existing=True
     )
-    
-    # تشغيل المجدول في الخلفية
     scheduler.start()
     logger.info("⏰ تم بدء تشغيل المجدول (التحقق كل 6 ساعات)")
     
-    # تنفيذ المهمة فوراً عند بدء التشغيل
-    validator.validate_all_links()
+    # تنفيذ المهمة فوراً عند بدء التشغيل (في الخلفية)
+    import threading
+    threading.Thread(target=validator.validate_all_links, daemon=True).start()
     
     return scheduler
