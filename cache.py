@@ -1,23 +1,40 @@
 import json
 import time
 import os
-from threading import Lock, Timer
+import redis
+from threading import Lock
 import logging
 
 logger = logging.getLogger(__name__)
 
 class Cache:
-    def __init__(self, ttl=3600, cache_file='cache.json', debounce_seconds=5):
+    def __init__(self, ttl=3600, cache_file='cache.json', use_redis=True):
         self.ttl = ttl
         self.cache_file = cache_file
-        self.debounce_seconds = debounce_seconds
+        self.use_redis = use_redis
         self.lock = Lock()
-        self.cache = {}
-        self._dirty = False
-        self._timer = None
-        self._load_from_disk()
+        self.redis_client = None
+        
+        if use_redis:
+            try:
+                self.redis_client = redis.Redis(
+                    host=os.getenv('REDIS_HOST', 'localhost'),
+                    port=int(os.getenv('REDIS_PORT', 6379)),
+                    password=os.getenv('REDIS_PASSWORD', ''),
+                    decode_responses=True
+                )
+                self.redis_client.ping()  # اختبار الاتصال
+                logger.info("✅ تم الاتصال بـ Redis بنجاح")
+                self.cache = {}
+            except Exception as e:
+                logger.warning(f"⚠️ فشل الاتصال بـ Redis، استخدام JSON بدلاً من ذلك: {e}")
+                self.use_redis = False
+                self._load_from_disk()
+        else:
+            self._load_from_disk()
     
     def _load_from_disk(self):
+        """تحميل الكاش من ملف JSON"""
         if os.path.exists(self.cache_file) and os.path.getsize(self.cache_file) > 0:
             try:
                 with open(self.cache_file, 'r', encoding='utf-8') as f:
@@ -37,22 +54,25 @@ class Cache:
             self._save_to_disk()
     
     def _save_to_disk(self):
+        """حفظ الكاش في ملف JSON"""
         try:
             with open(self.cache_file, 'w', encoding='utf-8') as f:
                 json.dump(self.cache, f, ensure_ascii=False, indent=2)
-            self._dirty = False
         except Exception as e:
             logger.warning(f"⚠️ خطأ في حفظ الكاش: {e}")
     
-    def _schedule_save(self):
-        """جدولة حفظ الكاش بعد فترة قصيرة (debounce)"""
-        if self._timer:
-            self._timer.cancel()
-        self._timer = Timer(self.debounce_seconds, self._save_to_disk)
-        self._timer.daemon = True
-        self._timer.start()
-    
     def get(self, key):
+        """الحصول على قيمة من الكاش"""
+        if self.use_redis and self.redis_client:
+            try:
+                data = self.redis_client.get(f"hydra:{key}")
+                if data:
+                    return json.loads(data)
+                return None
+            except:
+                pass
+        
+        # Fallback to JSON
         with self.lock:
             if key in self.cache:
                 entry = self.cache[key]
@@ -60,35 +80,61 @@ class Cache:
                     return entry['data']
                 else:
                     del self.cache[key]
-                    self._dirty = True
-                    self._schedule_save()
+                    self._save_to_disk()
             return None
     
     def set(self, key, value):
+        """تخزين قيمة في الكاش"""
+        if self.use_redis and self.redis_client:
+            try:
+                data = {
+                    'data': value,
+                    'timestamp': time.time()
+                }
+                self.redis_client.setex(
+                    f"hydra:{key}",
+                    self.ttl,
+                    json.dumps(data)
+                )
+                return
+            except:
+                pass
+        
+        # Fallback to JSON
         with self.lock:
             self.cache[key] = {
                 'data': value,
                 'timestamp': time.time()
             }
-            self._dirty = True
-            self._schedule_save()  # ✅ كتابة متأخرة بدلاً من الكتابة الفورية
-    
-    def clear(self):
-        with self.lock:
-            self.cache.clear()
-            self._dirty = True
-            self._schedule_save()
+            self._save_to_disk()
     
     def remove(self, key):
+        """حذف مفتاح من الكاش"""
+        if self.use_redis and self.redis_client:
+            try:
+                self.redis_client.delete(f"hydra:{key}")
+                return
+            except:
+                pass
+        
         with self.lock:
             if key in self.cache:
                 del self.cache[key]
-                self._dirty = True
-                self._schedule_save()
+                self._save_to_disk()
     
-    def force_save(self):
-        """حفظ فوري (يستخدم عند الإغلاق)"""
-        if self._timer:
-            self._timer.cancel()
-        if self._dirty:
-            self._save_to_disk()
+    def get_all(self):
+        """الحصول على جميع البيانات (للاستخدام مع المجدول)"""
+        if self.use_redis and self.redis_client:
+            try:
+                keys = self.redis_client.keys("hydra:*")
+                result = {}
+                for key in keys:
+                    data = self.redis_client.get(key)
+                    if data:
+                        key_name = key.replace("hydra:", "")
+                        result[key_name] = json.loads(data)
+                return result
+            except:
+                pass
+        
+        return self.cache
