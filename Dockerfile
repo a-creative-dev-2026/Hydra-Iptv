@@ -9,7 +9,6 @@ COPY . .
 
 RUN touch cache.json
 
-EXPOSE 10000
+EXPOSE 5000
 
-# استخدام PORT من Render (أو 10000 كقيمة افتراضية)
-CMD ["sh", "-c", "gunicorn app:app --bind 0.0.0.0:${PORT:-10000}"]
+CMD ["sh", "-c", "gunicorn app:app --bind 0.0.0.0:${PORT:-5000}"]
