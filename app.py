@@ -1,3 +1,4 @@
+import os  # ✅ أضف هذا السطر
 from flask import Flask, request, jsonify, Response, redirect
 from flask_cors import CORS
 from flask_limiter import Limiter
@@ -23,7 +24,10 @@ logger = logging.getLogger(__name__)
 
 proxy = SmartProxy()
 
-# --- المسارات ---
+# ============================================================
+# جميع المسارات
+# ============================================================
+
 @app.route('/')
 def index():
     return jsonify({
@@ -176,7 +180,7 @@ def list_all_channels():
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    print(f"🐍 Hydra IPTV Server v3.0")
+    print("🐍 Hydra IPTV Server v3.0")
     print("=" * 60)
     print(f"✅ السيرفر يعمل على: http://0.0.0.0:{port}")
     print(f"🌍 عدد الدول: {len(COUNTRY_CHANNELS)} دولة")
