@@ -1,7 +1,6 @@
 import requests
 import re
 from concurrent.futures import ThreadPoolExecutor
-import time
 
 class ChannelSearcher:
     def __init__(self):
@@ -11,54 +10,70 @@ class ChannelSearcher:
         })
     
     def search_channel(self, channel_name):
-        """البحث عن قناة"""
+        """البحث عن قناة في مصادر متعددة"""
         print(f"🔍 جاري البحث عن: {channel_name}")
         
-        # 1. البحث في المصادر المفتوحة
-        links = self._search_open_sources(channel_name)
+        # 1. البحث في iptv-org (أكبر مصدر مفتوح)
+        links = self._search_iptv_org(channel_name)
         
-        # 2. البحث في المصادر الإضافية
+        # 2. البحث في Free-TV
         if not links:
-            links = self._search_extra_sources(channel_name)
+            links = self._search_free_tv(channel_name)
         
-        # 3. التحقق من الروابط
+        # 3. البحث المباشر في GitHub
+        if not links:
+            links = self._search_github(channel_name)
+        
+        # التحقق من الروابط
         valid_links = self._validate_links(links)
         
         return valid_links
     
-    def _search_open_sources(self, channel_name):
-        """بحث في المصادر المفتوحة"""
-        sources = [
-            "https://iptv-org.github.io/iptv/playlist.m3u",
-            "https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8"
-        ]
-        
-        links = []
-        for source in sources:
-            try:
-                response = self.session.get(source, timeout=10)
-                if response.status_code == 200:
-                    # البحث عن القناة في النص
-                    pattern = rf'#EXTINF:.*,.*{re.escape(channel_name)}.*\n(https?://[^\s]+)'
-                    matches = re.findall(pattern, response.text, re.IGNORECASE)
-                    links.extend(matches)
-            except:
-                continue
-        
-        return links
-    
-    def _search_extra_sources(self, channel_name):
-        """بحث في مصادر إضافية"""
+    def _search_iptv_org(self, channel_name):
+        """البحث في iptv-org"""
         try:
-            # استخدام GitHub search
-            url = f"https://raw.githubusercontent.com/iptv-org/iptv/master/playlist.m3u"
-            response = self.session.get(url, timeout=10)
+            # جلب القائمة الكاملة
+            url = "https://iptv-org.github.io/iptv/index.m3u"
+            response = self.session.get(url, timeout=15)
+            
+            if response.status_code == 200:
+                # البحث عن القناة في النص
+                pattern = rf'#EXTINF:.*,.*{re.escape(channel_name)}.*\n(https?://[^\s]+)'
+                matches = re.findall(pattern, response.text, re.IGNORECASE)
+                return matches
+        except Exception as e:
+            print(f"⚠️ خطأ في iptv-org: {e}")
+        
+        return []
+    
+    def _search_free_tv(self, channel_name):
+        """البحث في Free-TV"""
+        try:
+            url = "https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8"
+            response = self.session.get(url, timeout=15)
+            
             if response.status_code == 200:
                 pattern = rf'#EXTINF:.*,.*{re.escape(channel_name)}.*\n(https?://[^\s]+)'
                 matches = re.findall(pattern, response.text, re.IGNORECASE)
                 return matches
-        except:
-            pass
+        except Exception as e:
+            print(f"⚠️ خطأ في Free-TV: {e}")
+        
+        return []
+    
+    def _search_github(self, channel_name):
+        """البحث في مستودعات GitHub"""
+        try:
+            # البحث في iptv-org channels
+            url = f"https://raw.githubusercontent.com/iptv-org/iptv/master/playlist.m3u"
+            response = self.session.get(url, timeout=15)
+            
+            if response.status_code == 200:
+                pattern = rf'#EXTINF:.*,.*{re.escape(channel_name)}.*\n(https?://[^\s]+)'
+                matches = re.findall(pattern, response.text, re.IGNORECASE)
+                return matches
+        except Exception as e:
+            print(f"⚠️ خطأ في GitHub: {e}")
         
         return []
     
@@ -66,12 +81,14 @@ class ChannelSearcher:
         """اختبار صحة الروابط"""
         valid = []
         
-        for link in links[:10]:  # حد أقصى 10 روابط
+        for link in links[:5]:  # حد أقصى 5 روابط
             try:
-                response = self.session.head(link, timeout=3)
+                response = self.session.head(link, timeout=5, allow_redirects=True)
                 if response.status_code in [200, 206, 302, 301]:
                     valid.append(link)
-            except:
+                    print(f"✅ رابط صالح: {link[:50]}...")
+            except Exception as e:
+                print(f"❌ رابط غير صالح: {link[:50]}... - {str(e)[:50]}")
                 continue
         
         return valid
