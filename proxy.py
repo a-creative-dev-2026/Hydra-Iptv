@@ -20,14 +20,11 @@ class SmartProxy:
             'Accept-Language': 'en-US,en;q=0.9,ar;q=0.8',
         })
         
-        # تحميل الروابط المسبقة
         self._load_predefined_links()
     
     def _load_predefined_links(self):
-        """تحميل الروابط المسبقة من channels.py"""
         logger.info("📥 جاري تحميل الروابط المسبقة...")
         
-        # 1. تحميل القنوات المشهورة
         try:
             from channels import POPULAR_CHANNELS
             for channel_name, url in POPULAR_CHANNELS.items():
@@ -37,11 +34,10 @@ class SmartProxy:
                     self.cache.set(channel_name, links)
             logger.info(f"✅ تم تحميل {len(POPULAR_CHANNELS)} قناة مشهورة")
         except ImportError:
-            logger.warning("⚠️ لا توجد قنوات مشهورة محددة في channels.py")
+            logger.warning("⚠️ لا توجد قنوات مشهورة محددة")
         except Exception as e:
             logger.warning(f"⚠️ خطأ في تحميل القنوات المشهورة: {e}")
         
-        # 2. تحميل قنوات الدول
         for country_code, data in COUNTRY_CHANNELS.items():
             channel_name = data['name']
             url = data['url']
@@ -50,7 +46,6 @@ class SmartProxy:
                 links.append(url)
                 self.cache.set(channel_name, links)
         
-        # 3. تحميل القنوات الرياضية
         for channel_name, url in SPORTS_CHANNELS.items():
             links = self.cache.get(channel_name) or []
             if url not in links:
@@ -60,8 +55,6 @@ class SmartProxy:
         logger.info(f"✅ تم تحميل {len(self.cache.cache)} قناة مسبقة في الكاش")
     
     def get_stream(self, channel_name):
-        """الحصول على تيار البث"""
-        # 1. البحث في الكاش الدائم
         cached_links = self.cache.get(channel_name)
         if cached_links:
             logger.info(f"📦 تم العثور على {len(cached_links)} رابط في الكاش لـ {channel_name}")
@@ -72,7 +65,6 @@ class SmartProxy:
                 else:
                     logger.info(f"❌ رابط لا يعمل: {link[:50]}...")
         
-        # 2. البحث عن روابط جديدة
         logger.info(f"🔍 لم يتم العثور على {channel_name} في الكاش، جاري البحث العميق...")
         links = self.searcher.search_channel(channel_name)
         
@@ -85,7 +77,6 @@ class SmartProxy:
         return None
     
     def _test_link(self, url):
-        """اختبار الرابط مع إعادة المحاولة"""
         try:
             for attempt in range(2):
                 try:
@@ -102,13 +93,11 @@ class SmartProxy:
             return False
     
     def _proxy_link(self, url):
-        """إعادة توجيه البث (توجيه مباشر لتوفير الباندويث)"""
         try:
             return redirect(url, code=302)
         except Exception as e:
             logger.error(f"❌ خطأ في التوجيه المباشر: {e}")
         
-        # البديل: البروكسي العادي
         try:
             response = self.session.get(url, stream=True, timeout=30)
             return Response(
@@ -126,7 +115,6 @@ class SmartProxy:
             return None
     
     def add_channel(self, channel_name, url):
-        """إضافة قناة يدوياً"""
         links = self.cache.get(channel_name) or []
         if url not in links:
             links.append(url)
