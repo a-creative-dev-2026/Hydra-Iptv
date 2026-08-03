@@ -18,8 +18,8 @@ class IPTVHunter:
             "https://iptv-org.github.io/iptv/index.nsfw.m3u",
             "https://raw.githubusercontent.com/ismailozgul/iptv/main/playlist.m3u",
         ]
-        # Local playlist
-        self.local_playlist = "playlist.m3u8"
+        # Local playlists directory
+        self.local_playlists_dir = "data/playlists"
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         }
@@ -57,26 +57,28 @@ class IPTVHunter:
         return results
 
     async def hunt(self, query: str) -> List[dict]:
+        all_results = []
+        
+        # 1. Search in local playlists first (Faster)
+        if os.path.exists(self.local_playlists_dir):
+            for filename in os.listdir(self.local_playlists_dir):
+                if filename.endswith(".m3u8"):
+                    filepath = os.path.join(self.local_playlists_dir, filename)
+                    try:
+                        # Read and parse each part
+                        with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+                            all_results.extend(self.parse_m3u(f.read(), query))
+                    except Exception as e:
+                        logger.error(f"Error reading local playlist {filename}: {e}")
+
+        # 2. Search in remote sources
         async with aiohttp.ClientSession() as session:
             tasks = [self.fetch_m3u(session, url) for url in self.sources]
-            contents = list(await asyncio.gather(*tasks))
+            contents = await asyncio.gather(*tasks)
             
-            all_results = []
-            
-            # Parse remote contents
             for content in contents:
                 if content:
                     all_results.extend(self.parse_m3u(content, query))
-            
-            # Stream-read local playlist to save memory
-            try:
-                if os.path.exists(self.local_playlist):
-                    with open(self.local_playlist, 'r', encoding='utf-8', errors='ignore') as f:
-                        # Process in chunks or read line by line if very large
-                        # For 500KB, reading at once is fine, but let's be safe
-                        all_results.extend(self.parse_m3u(f.read(), query))
-            except Exception as e:
-                logger.error(f"Error reading local playlist: {e}")
             
             # Deduplicate and sort by score
             unique_results = {}
