@@ -2,6 +2,7 @@ import asyncio
 import aiohttp
 import re
 import logging
+import os
 from typing import List, Set
 from urllib.parse import urlparse
 from rapidfuzz import fuzz
@@ -17,6 +18,8 @@ class IPTVHunter:
             "https://iptv-org.github.io/iptv/index.nsfw.m3u",
             "https://raw.githubusercontent.com/ismailozgul/iptv/main/playlist.m3u",
         ]
+        # Local playlist
+        self.local_playlist = "playlist.m3u8"
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         }
@@ -56,8 +59,16 @@ class IPTVHunter:
     async def hunt(self, query: str) -> List[dict]:
         async with aiohttp.ClientSession() as session:
             tasks = [self.fetch_m3u(session, url) for url in self.sources]
-            contents = await asyncio.gather(*tasks)
+            contents = list(await asyncio.gather(*tasks))
             
+            # Add local playlist content
+            try:
+                if os.path.exists(self.local_playlist):
+                    with open(self.local_playlist, 'r', encoding='utf-8', errors='ignore') as f:
+                        contents.append(f.read())
+            except Exception as e:
+                logger.error(f"Error reading local playlist: {e}")
+
             all_results = []
             for content in contents:
                 if content:

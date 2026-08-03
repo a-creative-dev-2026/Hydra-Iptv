@@ -39,10 +39,13 @@ cache = AsyncCache()
 if not os.path.exists("static"):
     os.makedirs("static")
 
-@app.get("/", response_class=HTMLResponse)
+@app.api_route("/", methods=["GET", "HEAD"], response_class=HTMLResponse)
 async def index():
-    with open("static/index.html", "r") as f:
-        return f.read()
+    try:
+        with open("static/index.html", "r") as f:
+            return f.read()
+    except FileNotFoundError:
+        return "<h1>Hydra IPTV v4.0</h1><p>Dashboard file not found. Check static/index.html</p>"
 
 @app.get("/search/{query}", response_model=SearchResult)
 async def search(query: str):
@@ -125,5 +128,7 @@ async def stats():
     }
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
+    # Render and other platforms often use the PORT environment variable.
+    # We default to 10000 if not set, but respect the system's choice.
+    port = int(os.environ.get("PORT", 10000))
     uvicorn.run(app, host="0.0.0.0", port=port)
