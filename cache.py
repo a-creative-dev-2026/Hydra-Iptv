@@ -15,12 +15,10 @@ class Cache:
         self._load_from_disk()
     
     def _load_from_disk(self):
-        """تحميل الكاش من الملف"""
-        if os.path.exists(self.cache_file):
+        if os.path.exists(self.cache_file) and os.path.getsize(self.cache_file) > 0:
             try:
                 with open(self.cache_file, 'r', encoding='utf-8') as f:
                     self.cache = json.load(f)
-                # حذف المدخلات المنتهية صلاحيتها
                 now = time.time()
                 expired = [k for k, v in self.cache.items() if now - v['timestamp'] > self.ttl]
                 for k in expired:
@@ -32,11 +30,10 @@ class Cache:
                 logger.warning(f"⚠️ خطأ في تحميل الكاش: {e}")
                 self.cache = {}
         else:
-            # إنشاء ملف الكاش الجديد
+            self.cache = {}
             self._save_to_disk()
     
     def _save_to_disk(self):
-        """حفظ الكاش في الملف"""
         try:
             with open(self.cache_file, 'w', encoding='utf-8') as f:
                 json.dump(self.cache, f, ensure_ascii=False, indent=2)
@@ -72,8 +69,3 @@ class Cache:
             if key in self.cache:
                 del self.cache[key]
                 self._save_to_disk()
-    
-    def get_all(self):
-        """الحصول على جميع بيانات الكاش"""
-        with self.lock:
-            return self.cache
