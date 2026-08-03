@@ -1,14 +1,15 @@
 import requests
-import os
-import re
-from flask import Response, stream_with_context
+from flask import Response, stream_with_context, redirect
 from cache import Cache
 from searcher import ChannelSearcher
 from channels import COUNTRY_CHANNELS, SPORTS_CHANNELS
+import logging
+
+logger = logging.getLogger(__name__)
 
 class SmartProxy:
     def __init__(self):
-        self.cache = Cache(ttl=3600)
+        self.cache = Cache(ttl=3600, cache_file='cache.json')
         self.searcher = ChannelSearcher()
         self.session = requests.Session()
         self.session.stream = True
@@ -19,16 +20,14 @@ class SmartProxy:
             'Accept-Language': 'en-US,en;q=0.9,ar;q=0.8',
         })
         
-        self.local_channels = {}
-        self.local_playlist_content = None
-        
+        # تحميل الروابط المسبقة
         self._load_predefined_links()
     
     def _load_predefined_links(self):
-        print("📥 جاري تحميل الروابط المسبقة...")
+        """تحميل الروابط المسبقة من channels.py"""
+        logger.info("📥 جاري تحميل الروابط المسبقة...")
         
-        self._load_local_playlist()
-        
+        # 1. تحميل القنوات المشهورة
         try:
             from channels import POPULAR_CHANNELS
             for channel_name, url in POPULAR_CHANNELS.items():
@@ -36,12 +35,13 @@ class SmartProxy:
                 if url not in links:
                     links.append(url)
                     self.cache.set(channel_name, links)
-            print(f"✅ تم تحميل {len(POPULAR_CHANNELS)} قناة مشهورة")
+            logger.info(f"✅ تم تحميل {len(POPULAR_CHANNELS)} قناة مشهورة")
         except ImportError:
-            print("⚠️ لا توجد قنوات مشهورة محددة في channels.py")
+            logger.warning("⚠️ لا توجد قنوات مشهورة محددة في channels.py")
         except Exception as e:
-            print(f"⚠️ خطأ في تحميل القنوات المشهورة: {e}")
+            logger.warning(f"⚠️ خطأ في تحميل القنوات المشهورة: {e}")
         
+        # 2. تحميل قنوات الدول
         for country_code, data in COUNTRY_CHANNELS.items():
             channel_name = data['name']
             url = data['url']
@@ -50,90 +50,44 @@ class SmartProxy:
                 links.append(url)
                 self.cache.set(channel_name, links)
         
+        # 3. تحميل القنوات الرياضية
         for channel_name, url in SPORTS_CHANNELS.items():
             links = self.cache.get(channel_name) or []
             if url not in links:
                 links.append(url)
                 self.cache.set(channel_name, links)
         
-        print(f"✅ تم تحميل {len(self.cache.cache)} قناة مسبقة في الكاش")
-    
-    def _load_local_playlist(self):
-        playlist_path = os.path.join(os.path.dirname(__file__), 'playlist.m3u8')
-        if not os.path.exists(playlist_path):
-            print("⚠️ ملف playlist.m3u8 غير موجود")
-            return
-        
-        try:
-            with open(playlist_path, 'r', encoding='utf-8', errors='ignore') as f:
-                content = f.read()
-            
-            self.local_playlist_content = content
-            lines = content.splitlines()
-            
-            current_name = None
-            count = 0
-            
-            for line in lines:
-                line = line.strip()
-                if line.startswith('#EXTINF:'):
-                    if ',' in line:
-                        current_name = line.split(',', 1)[1].strip()
-                    else:
-                        current_name = None
-                elif line and not line.startswith('#') and current_name:
-                    url = line
-                    if current_name not in self.local_channels:
-                        self.local_channels[current_name] = []
-                    if url not in self.local_channels[current_name]:
-                        self.local_channels[current_name].append(url)
-                    
-                    links = self.cache.get(current_name) or []
-                    if url not in links:
-                        links.append(url)
-                        self.cache.set(current_name, links)
-                    
-                    count += 1
-                    current_name = None
-            
-            print(f"✅ تم تحميل {count} قناة من playlist.m3u8 المحلي ({len(self.local_channels)} اسم فريد)")
-        except Exception as e:
-            print(f"❌ خطأ في تحميل playlist.m3u8: {e}")
+        logger.info(f"✅ تم تحميل {len(self.cache.cache)} قناة مسبقة في الكاش")
     
     def get_stream(self, channel_name):
+        """الحصول على تيار البث"""
+        # 1. البحث في الكاش الدائم
         cached_links = self.cache.get(channel_name)
         if cached_links:
-            print(f"📦 تم العثور على {len(cached_links)} رابط في الكاش لـ {channel_name}")
+            logger.info(f"📦 تم العثور على {len(cached_links)} رابط في الكاش لـ {channel_name}")
             for link in cached_links:
                 if self._test_link(link):
-                    print(f"✅ رابط يعمل: {link[:50]}...")
+                    logger.info(f"✅ رابط يعمل: {link[:50]}...")
                     return self._proxy_link(link)
                 else:
-                    print(f"❌ رابط لا يعمل: {link[:50]}...")
+                    logger.info(f"❌ رابط لا يعمل: {link[:50]}...")
         
-        channel_lower = channel_name.lower().strip()
-        for name, links in self.local_channels.items():
-            if channel_lower in name.lower() or name.lower() in channel_lower:
-                print(f"📦 تطابق جزئي: {name}")
-                for link in links:
-                    if self._test_link(link):
-                        print(f"✅ رابط يعمل: {link[:50]}...")
-                        self.cache.set(channel_name, links)
-                        return self._proxy_link(link)
-        
-        print(f"🔍 لم يتم العثور على {channel_name} في الكاش، جاري البحث العميق...")
+        # 2. البحث عن روابط جديدة باستخدام المحرك المطور
+        logger.info(f"🔍 لم يتم العثور على {channel_name} في الكاش، جاري البحث العميق...")
         links = self.searcher.search_channel(channel_name)
         
         if links:
-            print(f"✅ تم العثور على {len(links)} رابط جديد!")
+            logger.info(f"✅ تم العثور على {len(links)} رابط جديد!")
             self.cache.set(channel_name, links)
             return self._proxy_link(links[0])
         
-        print(f"❌ لم يتم العثور على روابط لـ {channel_name}")
+        logger.error(f"❌ لم يتم العثور على روابط لـ {channel_name}")
         return None
     
     def _test_link(self, url):
+        """اختبار الرابط مع إعادة المحاولة"""
         try:
+            # محاولة مرتين
             for attempt in range(2):
                 try:
                     response = self.session.head(url, timeout=5, allow_redirects=True)
@@ -142,13 +96,21 @@ class SmartProxy:
                 except:
                     if attempt == 0:
                         import time
-                        time.sleep(0.5)
+                        time.sleep(1)  # انتظر ثانية قبل إعادة المحاولة
                     continue
             return False
         except:
             return False
     
     def _proxy_link(self, url):
+        """إعادة توجيه البث (إما بروكسي أو توجيه مباشر)"""
+        # استخدام التوجيه المباشر لتوفير الباندويث
+        try:
+            return redirect(url, code=302)
+        except Exception as e:
+            logger.error(f"❌ خطأ في التوجيه المباشر: {e}")
+        
+        # البديل: البروكسي العادي
         try:
             response = self.session.get(url, stream=True, timeout=30)
             
@@ -163,10 +125,11 @@ class SmartProxy:
                 }
             )
         except Exception as e:
-            print(f"❌ خطأ في البروكسي: {e}")
+            logger.error(f"❌ خطأ في البروكسي: {e}")
             return None
     
     def add_channel(self, channel_name, url):
+        """إضافة قناة يدوياً"""
         links = self.cache.get(channel_name) or []
         if url not in links:
             links.append(url)
@@ -175,15 +138,5 @@ class SmartProxy:
         return False
     
     def get_channels_by_country(self, country_code):
+        """الحصول على قنوات دولة معينة"""
         return COUNTRY_CHANNELS.get(country_code, {}).get('name')
-    
-    def get_local_playlist(self):
-        return self.local_playlist_content
-    
-    def search_local(self, query):
-        query_lower = query.lower().strip()
-        results = {}
-        for name, links in self.local_channels.items():
-            if query_lower in name.lower():
-                results[name] = links
-        return results
