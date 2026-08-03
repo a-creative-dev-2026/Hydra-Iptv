@@ -6,4 +6,6 @@ beautifulsoup4==4.12.2
 lxml==4.9.3
 gunicorn==21.2.0
 fake-useragent==1.5.1
-# تم إزالة Telethon و aiohttp و serpapi لتقليل وقت التثبيت
+APScheduler==3.10.4
+redis==5.0.1
+rapidfuzz==3.6.2
