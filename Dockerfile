@@ -2,14 +2,15 @@ FROM python:3.9-slim
 
 WORKDIR /app
 
-# نسخ ملف المتطلبات أولاً (للاستفادة من التخزين المؤقت)
+# نسخ ملف المتطلبات
 COPY requirements.txt .
-
-# تثبيت المتطلبات
 RUN pip install --no-cache-dir -r requirements.txt
 
-# نسخ باقي الملفات
+# نسخ جميع الملفات
 COPY . .
+
+# إنشاء ملف الكاش
+RUN touch cache.json
 
 # تشغيل السيرفر
 CMD ["python", "app.py"]
