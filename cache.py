@@ -2,6 +2,9 @@ import json
 import time
 import os
 from threading import Lock
+import logging
+
+logger = logging.getLogger(__name__)
 
 class Cache:
     def __init__(self, ttl=3600, cache_file='cache.json'):
@@ -24,10 +27,13 @@ class Cache:
                     del self.cache[k]
                 if expired:
                     self._save_to_disk()
-                print(f"✅ تم تحميل {len(self.cache)} مدخل من الكاش الدائم")
+                logger.info(f"✅ تم تحميل {len(self.cache)} مدخل من الكاش الدائم")
             except Exception as e:
-                print(f"⚠️ خطأ في تحميل الكاش: {e}")
+                logger.warning(f"⚠️ خطأ في تحميل الكاش: {e}")
                 self.cache = {}
+        else:
+            # إنشاء ملف الكاش الجديد
+            self._save_to_disk()
     
     def _save_to_disk(self):
         """حفظ الكاش في الملف"""
@@ -35,7 +41,7 @@ class Cache:
             with open(self.cache_file, 'w', encoding='utf-8') as f:
                 json.dump(self.cache, f, ensure_ascii=False, indent=2)
         except Exception as e:
-            print(f"⚠️ خطأ في حفظ الكاش: {e}")
+            logger.warning(f"⚠️ خطأ في حفظ الكاش: {e}")
     
     def get(self, key):
         with self.lock:
@@ -66,3 +72,8 @@ class Cache:
             if key in self.cache:
                 del self.cache[key]
                 self._save_to_disk()
+    
+    def get_all(self):
+        """الحصول على جميع بيانات الكاش"""
+        with self.lock:
+            return self.cache
