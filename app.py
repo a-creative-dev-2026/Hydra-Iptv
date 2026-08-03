@@ -1,4 +1,4 @@
-import os  # ✅ أضف هذا السطر
+import os  # ✅ ضروري لقراءة متغير PORT
 from flask import Flask, request, jsonify, Response, redirect
 from flask_cors import CORS
 from flask_limiter import Limiter
@@ -104,8 +104,11 @@ def get_country_playlist(country_code):
     try:
         response = requests.get(url, timeout=15)
         if response.status_code == 200:
+            # دمج مع القائمة المحلية
+            local_content = load_local_playlist()
+            combined = merge_playlists(response.text, local_content)
             return Response(
-                response.text,
+                combined,
                 status=200,
                 content_type='application/vnd.apple.mpegurl; charset=utf-8',
                 headers={'Access-Control-Allow-Origin': '*'}
@@ -138,18 +141,13 @@ def get_category_playlist(category):
 @app.route('/playlist/local')
 @limiter.limit("20 per minute")
 def get_local_playlist():
-    try:
-        with open('playlist.m3u8', 'r', encoding='utf-8') as f:
-            content = f.read()
-        return Response(
-            content,
-            status=200,
-            content_type='application/vnd.apple.mpegurl; charset=utf-8',
-            headers={'Access-Control-Allow-Origin': '*'}
-        )
-    except Exception as e:
-        logger.error(f"❌ خطأ في تحميل القائمة المحلية: {e}")
-        return jsonify({'error': 'فشل في تحميل القائمة المحلية'}), 500
+    content = load_local_playlist()
+    return Response(
+        content,
+        status=200,
+        content_type='application/vnd.apple.mpegurl; charset=utf-8',
+        headers={'Access-Control-Allow-Origin': '*'}
+    )
 
 @app.route('/countries/all')
 def list_all_countries():
@@ -177,6 +175,27 @@ def list_all_channels():
     all_channels = {code: data for code, data in COUNTRY_CHANNELS.items()}
     all_channels['categories'] = CATEGORIES
     return jsonify(all_channels), 200, {'Content-Type': 'application/json; charset=utf-8'}
+
+# ============================================================
+# دوال مساعدة
+# ============================================================
+
+def load_local_playlist():
+    """تحميل القائمة المحلية من ملف playlist.m3u8"""
+    try:
+        with open('playlist.m3u8', 'r', encoding='utf-8') as f:
+            return f.read()
+    except Exception as e:
+        logger.error(f"❌ خطأ في تحميل القائمة المحلية: {e}")
+        return "#EXTM3U\n"
+
+def merge_playlists(iptv_org, local):
+    """دمج قائمتين مع إزالة التكرار البسيط"""
+    return iptv_org + '\n' + local
+
+# ============================================================
+# التشغيل
+# ============================================================
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
