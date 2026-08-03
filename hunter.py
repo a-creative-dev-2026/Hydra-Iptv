@@ -13,8 +13,8 @@ logger = logging.getLogger(__name__)
 class MegaHunter:
     """
     الصياد الشامل - يبحث في كل مكان
-    - قوائم M3U (أكثر من 20 مصدراً)
-    - تليجرام (أكثر من 15 قناة)
+    - قوائم M3U (أكثر من 30 مصدراً)
+    - تليجرام (أكثر من 20 قناة)
     - منتديات Reddit
     - محركات البحث (Google, DuckDuckGo, Bing)
     - خدمات مشاركة النصوص (Pastebin, Telegra.ph)
@@ -25,21 +25,20 @@ class MegaHunter:
     def __init__(self):
         self.timeout = aiohttp.ClientTimeout(total=15)
         self.session = None
-        self.semaphore = asyncio.Semaphore(30)  # 30 طلباً متزامناً
-        self.failed_links = set()  # تذكر الروابط التالفة
+        self.semaphore = asyncio.Semaphore(30)
+        self.failed_links = set()
         
         # ============================================================
-        # 🔥 المصادر الأساسية (قوائم M3U حقيقية)
+        # 🔥 المصادر الأساسية (قوائم M3U حقيقية - محدثة)
         # ============================================================
         self.m3u_sources = [
-            # المصادر الرئيسية (تعمل دائماً)
+            # المصادر الرئيسية (قد تعمل أو لا، لكننا نجربها)
             'https://iptv-org.github.io/iptv/index.m3u',
             'https://iptv-org.github.io/iptv/index.nsfw.m3u',
             'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8',
             'https://raw.githubusercontent.com/iptv-hub/iptv-hub/main/playlist.m3u',
             'https://romaxa55.github.io/world_ip_tv/output/index.m3u',
-            # مصادر إضافية (متنوعة)
-            'https://raw.githubusercontent.com/iptv-org/iptv/master/playlist.m3u',
+            # مصادر بديلة (تعمل غالباً)
             'https://raw.githubusercontent.com/ismailozgul/iptv/main/playlist.m3u',
             'https://raw.githubusercontent.com/mhdzumair/IPTV/main/playlist.m3u',
             'https://raw.githubusercontent.com/jaydenmb/iptv/main/playlist.m3u',
@@ -49,6 +48,16 @@ class MegaHunter:
             'https://raw.githubusercontent.com/Kodi-n-Playlist/iptv/main/playlist.m3u',
             'https://raw.githubusercontent.com/kayleekay/iptv/main/playlist.m3u',
             'https://raw.githubusercontent.com/samirsam/iptv/main/playlist.m3u',
+            'https://raw.githubusercontent.com/iptv-org/iptv/master/playlist.m3u',
+            # مصادر جديدة (من مشاريع أخرى)
+            'https://raw.githubusercontent.com/billybonk/iptv/main/playlist.m3u',
+            'https://raw.githubusercontent.com/kingy444/iptv/main/playlist.m3u',
+            'https://raw.githubusercontent.com/MikiBzh/IPTV/main/playlist.m3u',
+            'https://raw.githubusercontent.com/sn7696/IPTV/main/playlist.m3u',
+            'https://raw.githubusercontent.com/LaVieEnCode/IPTV/main/playlist.m3u',
+            'https://raw.githubusercontent.com/nikooo777/iptv/main/playlist.m3u',
+            'https://raw.githubusercontent.com/junguler/m3u/main/playlist.m3u',
+            'https://raw.githubusercontent.com/matthuisman/iptv/main/playlist.m3u',
         ]
         
         # ============================================================
@@ -105,10 +114,71 @@ class MegaHunter:
         ]
         
         # ============================================================
+        # 🌐 مصادر البث المباشر (من القائمة التي أرسلتها)
+        # ============================================================
+        self.streaming_sites = [
+            # Yacine TV
+            'https://yacinetv.com',
+            'https://yacinetv.live',
+            # Ostora TV
+            'https://ostora.tv',
+            # Yalla Shoot
+            'https://www.yallashoot.com',
+            'https://www.yallashoot-live.com',
+            'https://www.yallashoot-new.com',
+            'https://www.yallashoot-pro.com',
+            'https://www.yallashoot-plus.com',
+            'https://www.yallashoot-online.com',
+            'https://www.yallashoot-tv.com',
+            'https://www.yallashoot.net',
+            'https://www.yallashootlivetv.com',
+            # General Pro
+            'https://generalpro.app',
+            'https://generalpro.tv',
+            'https://generalpro.live',
+            'https://generalprosports.com',
+            'https://generalprofootball.com',
+            # Sport Plus
+            'https://sportplustv.com',
+            'https://livefootballtv.com',
+            # Koora Live
+            'https://www.koralive.com',
+            'https://www.kooorastar.com',
+            # BeIN Match
+            'https://www.beinmatch.com',
+            # منصات رسمية
+            'https://www.dazn.com',
+            'https://www.tod.tv',
+            'https://connect.beinsports.com',
+            'https://www.skysports.com/watch',
+            'https://www.espn.com/watch/',
+            'https://www.bbc.co.uk/iplayer',
+            'https://www.fifa.com/fifaplus/en',
+            'https://www.sbs.com.au/ondemand',
+            'https://www.sonyliv.com',
+            'https://www.hotstar.com',
+            'https://www.fubo.tv',
+            'https://tv.youtube.com',
+            'https://www.hulu.com/live-sports',
+            'https://www.peacocktv.com',
+            'https://www.foxsports.com',
+            'https://www.livesoccertv.com',
+            'https://www.wheresthematch.com',
+            'https://play.stream2watch.com',
+            'https://www.footybite.tv',
+            'https://buffstreams.is',
+            'https://www.vipleague.la',
+            'https://www.viprow.nu',
+        ]
+        
+        # ============================================================
         # 🔍 كلمات البحث (ذكية)
         # ============================================================
-        self.quality_keywords = ['FHD', 'HD', 'SD', '1080p', '720p', '480p', '4k', '2k', 'UHD']
-        self.trusted_domains = ['amagi.tv', 'akamaized.net', 'streamlock.net', 'sofast.tv', 'cloudfront.net', 'edgenextcdn.net', 'cdn3.wowza.com']
+        self.quality_keywords = ['FHD', 'HD', 'SD', '1080p', '720p', '4k', 'UHD']
+        self.trusted_domains = [
+            'amagi.tv', 'akamaized.net', 'streamlock.net', 'sofast.tv',
+            'cloudfront.net', 'edgenextcdn.net', 'cdn3.wowza.com'
+        ]
         
         logger.info(f"🔥 تم تهيئة الصياد الشامل مع {len(self.m3u_sources)} مصدر M3U و {len(self.telegram_sources)} قناة تليجرام")
     
@@ -130,7 +200,7 @@ class MegaHunter:
             self.session = session
             
             # 1. البحث في قوائم M3U
-            tasks = [self._search_m3u(url, keywords) for url in self.m3u_sources[:10]]
+            tasks = [self._search_m3u(url, keywords) for url in self.m3u_sources[:15]]
             
             # 2. البحث في تليجرام
             for keyword in keywords[:3]:
@@ -144,10 +214,14 @@ class MegaHunter:
             for keyword in keywords[:2]:
                 tasks.append(self._search_paste(keyword))
             
-            # 5. البحث في محركات البحث
+            # 5. البحث في مواقع البث المباشر
+            for site in self.streaming_sites[:10]:
+                tasks.append(self._search_streaming_site(site, keywords))
+            
+            # 6. البحث في محركات البحث
             tasks.append(self._search_web(keywords[0] if keywords else channel_name))
             
-            # 6. توليد روابط بديلة
+            # 7. توليد روابط بديلة
             if keywords:
                 tasks.append(self._generate_alternative_links(keywords[0]))
             
@@ -161,16 +235,16 @@ class MegaHunter:
                 elif isinstance(result, Exception):
                     logger.debug(f"⚠️ خطأ: {str(result)[:50]}")
         
-        # 7. تنقية وترتيب
+        # 8. تنقية وترتيب
         unique_links = self._deduplicate(all_links)
         filtered_links = self._filter_by_keywords(unique_links, keywords)
         ranked_links = self._rank_links(filtered_links, channel_name)
         
-        # 8. اختبار عميق (ثلاث طرق)
+        # 9. اختبار عميق (ثلاث طرق)
         logger.info("🧪 جاري الاختبار العميق للروابط...")
         validated = await self._deep_validate(ranked_links[:20])
         
-        # 9. اختيار أفضل النتائج
+        # 10. اختيار أفضل النتائج
         final = self._select_best(validated, max_results)
         
         elapsed = time.time() - start_time
@@ -184,7 +258,6 @@ class MegaHunter:
     async def _search_m3u(self, url, keywords):
         """البحث في قائمة M3U"""
         try:
-            # تجنب الروابط التي فشلت سابقاً
             if url in self.failed_links:
                 return []
             
@@ -199,16 +272,9 @@ class MegaHunter:
                     links = []
                     
                     for keyword in keywords[:5]:
-                        # بحث دقيق
                         pattern = rf'#EXTINF:.*,.*{re.escape(keyword)}.*\n(https?://[^\s]+)'
                         matches = re.findall(pattern, content, re.IGNORECASE)
                         links.extend(matches)
-                        
-                        # بحث مرن (بدون tvg-name)
-                        if not matches:
-                            pattern = rf'#EXTINF:.*,.*{re.escape(keyword)}.*\n(https?://[^\s]+)'
-                            matches = re.findall(pattern, content, re.IGNORECASE)
-                            links.extend(matches)
                     
                     return links
         except Exception as e:
@@ -287,7 +353,36 @@ class MegaHunter:
         return links
     
     # ============================================================
-    # 🌐 5. البحث في محركات البحث
+    # 🌐 5. البحث في مواقع البث المباشر
+    # ============================================================
+    
+    async def _search_streaming_site(self, site, keywords):
+        """البحث في موقع بث مباشر"""
+        links = []
+        try:
+            # جرب البحث في الموقع
+            for keyword in keywords[:2]:
+                url = f"{site}/search?q={quote_plus(keyword)}"
+                headers = self._get_headers()
+                async with self.semaphore:
+                    async with self.session.get(url, headers=headers) as response:
+                        if response.status == 200:
+                            content = await response.text()
+                            # استخراج روابط M3U8
+                            pattern = r'(https?://[^\s"\']+\.m3u8[^\s"\']*)'
+                            matches = re.findall(pattern, content, re.IGNORECASE)
+                            links.extend(matches)
+                            
+                            # استخراج روابط البث المضمنة (قد تكون في iframes أو src)
+                            iframe_pattern = r'(https?://[^\s"\']+\.m3u8[^\s"\']*)'
+                            iframe_matches = re.findall(iframe_pattern, content, re.IGNORECASE)
+                            links.extend(iframe_matches)
+        except:
+            pass
+        return links
+    
+    # ============================================================
+    # 🌐 6. البحث في محركات البحث
     # ============================================================
     
     async def _search_web(self, keyword):
@@ -327,25 +422,22 @@ class MegaHunter:
             return []
     
     # ============================================================
-    # 🔗 6. توليد روابط بديلة
+    # 🔗 7. توليد روابط بديلة
     # ============================================================
     
     async def _generate_alternative_links(self, channel_name):
-        """توليد روابط بديلة من نفس النطاق (جودة مختلفة)"""
+        """توليد روابط بديلة من نفس النطاق"""
         try:
-            # نبحث في مصادرنا عن روابط مماثلة
             base_url = "https://iptv-org.github.io/iptv/index.m3u"
             headers = self._get_headers()
             async with self.semaphore:
                 async with self.session.get(base_url, headers=headers) as response:
                     if response.status == 200:
                         content = await response.text()
-                        # نبحث عن روابط تحتوي على اسم القناة ونستبدل معلمات الجودة
                         pattern = rf'#EXTINF:.*,.*{re.escape(channel_name)}.*\n(https?://[^\s]+)'
                         matches = re.findall(pattern, content, re.IGNORECASE)
                         alternatives = []
                         for match in matches:
-                            # نضيف نسخاً بجودة مختلفة
                             base = match.split('?')[0]
                             for quality in ['FHD', 'HD', 'SD']:
                                 if quality.lower() not in base.lower():
@@ -357,7 +449,7 @@ class MegaHunter:
         return []
     
     # ============================================================
-    # 🧪 7. اختبار عميق (ثلاث طرق)
+    # 🧪 8. اختبار عميق (ثلاث طرق)
     # ============================================================
     
     async def _deep_validate(self, links):
@@ -366,7 +458,6 @@ class MegaHunter:
         
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=6)) as session:
             for link in links:
-                # تجاهل الروابط التي فشلت سابقاً
                 if link in self.failed_links:
                     continue
                 
@@ -417,7 +508,7 @@ class MegaHunter:
         return valid
     
     # ============================================================
-    # 📊 8. ترتيب النتائج واختيار الأفضل
+    # 📊 9. ترتيب النتائج واختيار الأفضل
     # ============================================================
     
     def _rank_links(self, links, query):
@@ -435,23 +526,19 @@ class MegaHunter:
             score = 0
             link_lower = link.lower()
             
-            # الجودة
             for key, val in quality_map.items():
                 if key in link_lower:
                     score += val
                     break
             
-            # المصادر الموثوقة
             for domain in self.trusted_domains:
                 if domain in link_lower:
                     score += 10
                     break
             
-            # تطابق الاسم
             if query_lower in link_lower:
                 score += 8
             
-            # HTTPS
             if link.startswith('https://'):
                 score += 3
             
@@ -465,7 +552,6 @@ class MegaHunter:
         if len(links) <= max_results:
             return links
         
-        # تنويع المصادر
         domains_seen = set()
         selected = []
         for link in links:
@@ -479,7 +565,7 @@ class MegaHunter:
         return selected
     
     # ============================================================
-    # 🧠 9. توليد كلمات بحث ذكية
+    # 🧠 10. توليد كلمات بحث ذكية
     # ============================================================
     
     def _generate_keywords(self, channel_name):
@@ -487,12 +573,10 @@ class MegaHunter:
         keywords = [channel_name]
         name = channel_name.lower().strip()
         
-        # إزالة الأرقام
         no_numbers = re.sub(r'\d+', '', name).strip()
         if no_numbers and no_numbers != name:
             keywords.append(no_numbers)
         
-        # إزالة الكلمات الإضافية
         for word in ['hd', 'fhd', 'uhd', '4k', 'tv', 'channel']:
             if word in name:
                 keywords.append(name.replace(word, '').strip())
@@ -536,7 +620,7 @@ class MegaHunter:
         return filtered
     
     # ============================================================
-    # 🛠️ 10. دوال مساعدة
+    # 🛠️ 11. دوال مساعدة
     # ============================================================
     
     def _get_headers(self):
