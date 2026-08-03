@@ -69,18 +69,16 @@ def index():
     }), 200, {'Content-Type': 'application/json; charset=utf-8'}
 
 @app.route('/channel/<channel_name>')
-@limiter.limit("10 per minute")  # 10 طلبات لكل دقيقة
+@limiter.limit("10 per minute")
 def stream_channel(channel_name):
     """بث قناة مباشرة"""
     logger.info(f"📺 طلب بث: {channel_name}")
     
-    # محاولة البث المباشر
     stream = proxy.get_stream(channel_name)
     
     if stream:
         return stream
     
-    # إذا لم يعمل البث المباشر، حاول إعادة التوجيه
     return jsonify({
         'error': f'لم يتم العثور على {channel_name}',
         'message': 'جاري البحث عن روابط جديدة...',
@@ -96,7 +94,6 @@ def search_channel(channel_name):
     links = proxy.searcher.search_channel(channel_name)
     
     if links:
-        # تخزين النتائج في الكاش الدائم
         proxy.cache.set(channel_name, links)
         return jsonify({
             'found': True,
@@ -120,10 +117,8 @@ def get_country_playlist(country_code):
         return jsonify({'error': 'دولة غير مدعومة'}), 404, {'Content-Type': 'application/json; charset=utf-8'}
     
     try:
-        # جلب القائمة من iptv-org
         response = requests.get(url, timeout=15)
         if response.status_code == 200:
-            # دمج مع القائمة المحلية
             local_content = load_local_playlist()
             combined = merge_playlists(response.text, local_content)
             return Response(
@@ -227,7 +222,6 @@ def load_local_playlist():
 
 def merge_playlists(iptv_org, local):
     """دمج قائمتين مع إزالة التكرار البسيط"""
-    # إضافة القائمة المحلية في نهاية القائمة الرئيسية
     return iptv_org + '\n' + local
 
 # ============================================================
