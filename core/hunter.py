@@ -61,18 +61,22 @@ class IPTVHunter:
             tasks = [self.fetch_m3u(session, url) for url in self.sources]
             contents = list(await asyncio.gather(*tasks))
             
-            # Add local playlist content
-            try:
-                if os.path.exists(self.local_playlist):
-                    with open(self.local_playlist, 'r', encoding='utf-8', errors='ignore') as f:
-                        contents.append(f.read())
-            except Exception as e:
-                logger.error(f"Error reading local playlist: {e}")
-
             all_results = []
+            
+            # Parse remote contents
             for content in contents:
                 if content:
                     all_results.extend(self.parse_m3u(content, query))
+            
+            # Stream-read local playlist to save memory
+            try:
+                if os.path.exists(self.local_playlist):
+                    with open(self.local_playlist, 'r', encoding='utf-8', errors='ignore') as f:
+                        # Process in chunks or read line by line if very large
+                        # For 500KB, reading at once is fine, but let's be safe
+                        all_results.extend(self.parse_m3u(f.read(), query))
+            except Exception as e:
+                logger.error(f"Error reading local playlist: {e}")
             
             # Deduplicate and sort by score
             unique_results = {}

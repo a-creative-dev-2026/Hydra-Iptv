@@ -3,10 +3,10 @@ services:
     name: hydra-iptv-v4
     env: python
     buildCommand: pip install -r requirements.txt
-    # Explicitly use port 10000 to match Docker and main.py default
-    startCommand: uvicorn main:app --host 0.0.0.0 --port 10000
+    # Explicitly use port 5000 to match Render's expectation
+    startCommand: uvicorn main:app --host 0.0.0.0 --port 5000
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
       - key: PORT
-        value: 10000
+        value: 5000
