@@ -72,7 +72,7 @@ class SmartProxy:
                 else:
                     logger.info(f"❌ رابط لا يعمل: {link[:50]}...")
         
-        # 2. البحث عن روابط جديدة باستخدام المحرك المطور
+        # 2. البحث عن روابط جديدة
         logger.info(f"🔍 لم يتم العثور على {channel_name} في الكاش، جاري البحث العميق...")
         links = self.searcher.search_channel(channel_name)
         
@@ -87,7 +87,6 @@ class SmartProxy:
     def _test_link(self, url):
         """اختبار الرابط مع إعادة المحاولة"""
         try:
-            # محاولة مرتين
             for attempt in range(2):
                 try:
                     response = self.session.head(url, timeout=5, allow_redirects=True)
@@ -96,15 +95,14 @@ class SmartProxy:
                 except:
                     if attempt == 0:
                         import time
-                        time.sleep(1)  # انتظر ثانية قبل إعادة المحاولة
+                        time.sleep(1)
                     continue
             return False
         except:
             return False
     
     def _proxy_link(self, url):
-        """إعادة توجيه البث (إما بروكسي أو توجيه مباشر)"""
-        # استخدام التوجيه المباشر لتوفير الباندويث
+        """إعادة توجيه البث (توجيه مباشر لتوفير الباندويث)"""
         try:
             return redirect(url, code=302)
         except Exception as e:
@@ -113,7 +111,6 @@ class SmartProxy:
         # البديل: البروكسي العادي
         try:
             response = self.session.get(url, stream=True, timeout=30)
-            
             return Response(
                 stream_with_context(response.iter_content(chunk_size=8192)),
                 status=response.status_code,
@@ -138,5 +135,4 @@ class SmartProxy:
         return False
     
     def get_channels_by_country(self, country_code):
-        """الحصول على قنوات دولة معينة"""
         return COUNTRY_CHANNELS.get(country_code, {}).get('name')
