@@ -1,14 +1,9 @@
 services:
   - type: web
-    name: hydra-iptv
+    name: hydra-iptv-v4
     env: python
-    buildCommand: |
-      pip install --upgrade pip
-      pip install --no-cache-dir -r requirements.txt
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
-      - key: HOST
-        value: 0.0.0.0
-      - key: DEBUG
-        value: false
-      # ✅ لا تضع PORT هنا، دع Render يديره تلقائياً
+      - key: PYTHON_VERSION
+        value: 3.11.0

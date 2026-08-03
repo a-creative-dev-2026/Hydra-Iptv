@@ -1,16 +1,9 @@
-FROM python:3.9-slim
-
+FROM python:3.11-slim
 WORKDIR /app
-
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-
 COPY . .
-
-RUN touch cache.json
-
-# ✅ استخدام المنفذ المتغير
+RUN touch cache.json && chmod 666 cache.json
+ENV PORT=10000
 EXPOSE 10000
-
-# ✅ استخدم PORT من Render أو 10000 كقيمة افتراضية
-CMD ["sh", "-c", "gunicorn app:app --bind 0.0.0.0:${PORT:-10000}"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "10000"]
