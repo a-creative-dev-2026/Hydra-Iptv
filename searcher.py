@@ -9,9 +9,7 @@ class ChannelSearcher:
         self.hunter = LinkHunter()
     
     def search_channel(self, channel_name, country=None):
-        """الواجهة الرئيسية للبحث"""
         logger.info(f"🔍 بدء البحث عن: {channel_name}")
-        
         try:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
