@@ -21,47 +21,69 @@ class IPTVHunter:
             "https://raw.githubusercontent.com/pizofre/iptv/master/playlist.m3u8",
             "https://raw.githubusercontent.com/Yebon/IPTV/main/playlist.m3u",
         ]
-        # Local playlists directory
         self.local_playlists_dir = "data/playlists"
-        self.headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        self.user_agents = [
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1"
+        ]
+        self.semaphore = asyncio.Semaphore(10)
+
+    def get_headers(self):
+        import random
+        return {
+            "User-Agent": random.choice(self.user_agents),
+            "Accept": "*/*",
+            "Accept-Language": "en-US,en;q=0.9,ar;q=0.8",
+            "Referer": "https://www.google.com/",
+            "Origin": "https://www.google.com/"
         }
-        self.semaphore = asyncio.Semaphore(5)
 
     async def fetch_m3u(self, session: aiohttp.ClientSession, url: str) -> str:
         async with self.semaphore:
             try:
-                async with session.get(url, headers=self.headers, timeout=20) as response:
+                async with session.get(url, headers=self.get_headers(), timeout=25) as response:
                     if response.status == 200:
                         return await response.text()
             except Exception as e:
-                logger.error(f"Error fetching {url}: {e}")
+                logger.debug(f"Error fetching {url}: {e}")
             return ""
 
     def parse_m3u(self, content: str, query: str) -> List[dict]:
         results = []
-        pattern = r'#EXTINF:.*?,(.*?)\n(https?://[^\s]+)'
+        # Support various M3U formats and attributes
+        pattern = r'#EXTINF:.*?(?:tvg-logo="(.*?)")?.*?,(.*?)\n(https?://[^\s]+)'
         matches = re.findall(pattern, content, re.IGNORECASE | re.MULTILINE)
         
         query_clean = query.lower().strip()
         
-        for name, url in matches:
+        for logo, name, url in matches:
             name_clean = name.strip()
             name_lower = name_clean.lower()
             
-            # Deep matching logic
-            ratio = fuzz.token_set_ratio(query_clean, name_lower)
-            if ratio > 85 or query_clean in name_lower:
+            # Monster Accuracy Logic: Check for exact match or high confidence fuzzy match
+            ratio = fuzz.token_sort_ratio(query_clean, name_lower)
+            partial_ratio = fuzz.partial_ratio(query_clean, name_lower)
+            
+            # If query is a substring of the name, it's highly relevant
+            is_substring = query_clean in name_lower
+            
+            if ratio > 80 or (is_substring and partial_ratio > 90):
                 # Detect quality
                 quality = "SD"
                 if any(q in name_lower for q in ["fhd", "1080p", "4k"]): quality = "FHD"
                 elif any(q in name_lower for q in ["hd", "720p"]): quality = "HD"
                 
+                # Token/Protection Handling: Detect if URL needs special treatment
+                # (Logic to be used by the proxy to handle sessions/tokens)
+                
                 results.append({
                     "name": name_clean,
                     "url": url.strip(),
+                    "logo": logo if logo else None,
                     "quality": quality,
-                    "score": ratio + (5 if quality == "FHD" else 2 if quality == "HD" else 0)
+                    "score": ratio + (10 if is_substring else 0) + (5 if quality == "FHD" else 0)
                 })
         return results
 

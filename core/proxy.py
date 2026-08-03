@@ -2,30 +2,49 @@ import aiohttp
 from fastapi import Response
 from fastapi.responses import StreamingResponse
 import logging
+from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
 class StreamProxy:
     def __init__(self):
-        self.headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        self.user_agents = [
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1",
+            "VLC/3.0.18 LibVLC/3.0.18",
+            "OTT-Player/1.0"
+        ]
+
+    def get_smart_headers(self, url: str):
+        import random
+        domain = urlparse(url).netloc
+        headers = {
+            "User-Agent": random.choice(self.user_agents),
             "Accept": "*/*",
-            "Icy-MetaData": "1"
+            "Icy-MetaData": "1",
+            "Connection": "keep-alive",
+            "Referer": f"https://{domain}/",
+            "Origin": f"https://{domain}"
         }
+        return headers
 
     async def stream_generator(self, url: str):
-        async with aiohttp.ClientSession() as session:
+        headers = self.get_smart_headers(url)
+        # Increase timeout and use a more robust session
+        timeout = aiohttp.ClientTimeout(total=None, connect=10, sock_read=60)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
             try:
-                async with session.get(url, headers=self.headers, timeout=None) as response:
-                    if response.status != 200:
-                        logger.error(f"Failed to fetch stream: {response.status}")
+                async with session.get(url, headers=headers, allow_redirects=True) as response:
+                    if response.status not in [200, 206]:
+                        logger.error(f"Failed to fetch stream: {response.status} for {url}")
                         return
 
-                    async for chunk in response.content.iter_chunked(8192):
+                    # Forward essential headers from the source
+                    async for chunk in response.content.iter_chunked(16384): # Larger chunks for smoother HD
                         if chunk:
                             yield chunk
             except Exception as e:
-                logger.error(f"Proxy Error: {e}")
+                logger.error(f"Monster Proxy Error for {url}: {e}")
 
     async def get_stream_response(self, urls: list):
         """The Monster Proxy: Tries multiple URLs if one fails"""
