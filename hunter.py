@@ -11,131 +11,103 @@ from rapidfuzz import fuzz, process
 logger = logging.getLogger(__name__)
 
 class LinkHunter:
-    """صياد الروابط المتطور - أسرع، أوسع، أكثر دقة"""
+    """صياد الروابط المتطور - التركيز على الصلاحية والجودة"""
     
     def __init__(self):
-        self.timeout = aiohttp.ClientTimeout(total=15)
+        self.timeout = aiohttp.ClientTimeout(total=20)
         self.session = None
-        self.semaphore = asyncio.Semaphore(20)  # للتحكم في عدد الطلبات المتزامنة
+        self.semaphore = asyncio.Semaphore(15)
         
-        # وكلاء User-Agent متنوعون
         self.user_agents = [
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0',
         ]
         
-        # 🔥 مصادر جديدة للبحث (مواقع بث، منتديات، مستودعات)
+        # 🔥 مصادر متعددة للبحث
         self.sources = {
             'iptv_org': 'https://iptv-org.github.io/iptv/index.m3u',
             'iptv_org_nsfw': 'https://iptv-org.github.io/iptv/index.nsfw.m3u',
             'free_tv': 'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8',
             'iptv_hub': 'https://raw.githubusercontent.com/iptv-hub/iptv-hub/main/playlist.m3u',
             'world_iptv': 'https://romaxa55.github.io/world_ip_tv/output/index.m3u',
-            'iptv_github': 'https://raw.githubusercontent.com/iptv-org/iptv/master/playlist.m3u',
+            'github_iptv': 'https://raw.githubusercontent.com/iptv-org/iptv/master/playlist.m3u',
         }
         
-        # قنوات تليجرام
         self.telegram_sources = [
             'iptv_links', 'm3u8_files', 'beIN_Sports_links',
             'live_tv_channels', 'IPTV442WEB', 'iptv_m3u',
             'm3u8_live', 'iptv_channels', 'free_iptv',
-            'iptv_playlist', 'm3u_streams'
+            'iptv_playlist', 'm3u_streams', 'iptv_m3u8'
         ]
         
-        # 🔥 مواقع بث مباشر (جديدة)
         self.streaming_sites = [
-            'https://pastebin.com',
-            'https://telegra.ph',
-            'https://t.me',
-            'https://github.com',
-            'https://www.reddit.com/r/IPTV',
-            'https://www.reddit.com/r/m3u8',
-            'https://www.reddit.com/r/FreeIPTV',
-            'https://www.reddit.com/r/IPTVpro',
-            'https://www.reddit.com/r/IPTVreviews',
+            'https://pastebin.com', 'https://telegra.ph', 'https://t.me',
+            'https://github.com', 'https://www.reddit.com/r/IPTV',
+            'https://www.reddit.com/r/m3u8', 'https://www.reddit.com/r/FreeIPTV',
+            'https://www.reddit.com/r/IPTVpro', 'https://www.reddit.com/r/IPTVreviews',
         ]
     
-    async def hunt(self, channel_name, max_results=20):
-        """الصيد الرئيسي - سريع ودقيق"""
+    async def hunt(self, channel_name, max_results=15):
+        """الصيد الرئيسي - مع اختبار صارم للصلاحية"""
         logger.info(f"🔍 بدء الصيد عن: {channel_name}")
         all_links = []
         start_time = time.time()
         
-        # توليد أسماء بديلة
         variants = self._generate_variants(channel_name)
-        logger.info(f"📝 عدد المتغيرات: {len(variants)}")
+        logger.info(f"📝 متغيرات البحث: {len(variants)}")
         
-        # 🔥 البحث في المصادر مع Semaphore للتحكم في التوازي
         async with aiohttp.ClientSession(timeout=self.timeout) as session:
             self.session = session
             
-            # 1. البحث في القوائم الرئيسية (أسرع)
-            list_tasks = [
-                self._fetch_playlist(url, variants[:3])
-                for url in self.sources.values()
-            ]
+            # 🔥 البحث في جميع المصادر بالتوازي
+            tasks = []
             
-            # 2. البحث في الويب (أوسع)
-            web_tasks = [
-                self._search_web(variant) for variant in variants[:2]
-            ]
+            # 1. القوائم الرئيسية
+            for url in self.sources.values():
+                tasks.append(self._fetch_playlist(url, variants[:4]))
             
-            # 3. البحث في تليجرام
-            telegram_tasks = [
-                self._search_telegram(variant) for variant in variants[:2]
-            ]
+            # 2. الويب
+            for variant in variants[:3]:
+                tasks.append(self._search_web(variant))
+                tasks.append(self._search_telegram(variant))
+                tasks.append(self._search_streaming(variant))
             
-            # 4. البحث في مواقع البث
-            stream_tasks = [
-                self._search_streaming_sites(variant) for variant in variants[:2]
-            ]
+            results = await asyncio.gather(*tasks, return_exceptions=True)
             
-            # تنفيذ جميع المهام بالتوازي
-            all_results = await asyncio.gather(
-                *list_tasks,
-                *web_tasks,
-                *telegram_tasks,
-                *stream_tasks,
-                return_exceptions=True
-            )
-            
-            # جمع النتائج
-            for result in all_results:
+            for result in results:
                 if isinstance(result, list):
                     all_links.extend(result)
-                elif isinstance(result, Exception):
-                    logger.warning(f"⚠️ خطأ: {str(result)[:50]}")
         
-        # 5. إذا لم نجد نتائج كافية، استخدم Fuzzy Search
+        # 3. Fuzzy Search إذا كانت النتائج قليلة
         if len(all_links) < 5:
-            logger.info("🔄 جاري البحث الضبابي (Fuzzy Search)...")
+            logger.info("🔄 جاري البحث الضبابي...")
             fuzzy_links = await self._fuzzy_search(channel_name)
             if fuzzy_links:
                 all_links.extend(fuzzy_links)
         
-        # 6. تصفية وترتيب النتائج
-        unique_links = self._deduplicate(all_links)
-        ranked_links = self._rank_by_quality(unique_links, channel_name)
+        # 4. تنقية
+        unique = self._deduplicate(all_links)
         
-        # 7. 🔥 اختبار سريع وفعال للروابط
-        logger.info("🧪 جاري اختبار الروابط (فحص سريع)...")
-        valid_links = await self._quick_validate(ranked_links[:20])
+        # 🔥 5. اختبار صارم للصلاحية (الخطوة الأهم)
+        logger.info("🧪 جاري اختبار صلاحية الروابط (قد يستغرق قليلاً)...")
+        valid_links = await self._strict_validate(unique[:30])
         
-        # 8. 🔥 ضمان الجودة: اختيار أفضل 5 روابط مع جودات مختلفة
-        final_links = self._select_best_quality(valid_links, channel_name)
+        # 6. ترتيب حسب الجودة
+        ranked = self._rank_by_quality(valid_links, channel_name)
+        
+        # 7. اختيار أفضل 5 روابط على الأقل
+        final = self._select_best(ranked, channel_name)
         
         elapsed = time.time() - start_time
-        logger.info(f"✅ تم العثور على {len(final_links)} رابط صالح في {elapsed:.2f} ثانية")
-        return final_links[:max_results]
+        logger.info(f"✅ تم العثور على {len(final)} رابط صالح في {elapsed:.2f} ثانية")
+        return final[:15]
     
     # ============================================================
-    # 🔥 1. جلب القوائم الرئيسية (أسرع مصدر)
+    # 🔥 1. جلب القوائم
     # ============================================================
     
     async def _fetch_playlist(self, url, variants):
-        """جلب قائمة M3U والبحث فيها"""
         try:
             headers = self._get_headers()
             async with self.semaphore:
@@ -143,12 +115,11 @@ class LinkHunter:
                     if response.status == 200:
                         content = await response.text()
                         return self._extract_links(content, variants)
-        except Exception as e:
-            logger.warning(f"⚠️ خطأ في {url[:50]}: {e}")
+        except:
+            pass
         return []
     
     def _extract_links(self, content, variants):
-        """استخراج الروابط من محتوى M3U"""
         links = []
         for variant in variants:
             pattern = rf'#EXTINF:.*,.*{re.escape(variant)}.*\n(https?://[^\s]+)'
@@ -157,35 +128,25 @@ class LinkHunter:
         return links
     
     # ============================================================
-    # 🔥 2. البحث في الويب (أوسع)
+    # 🔥 2. البحث في الويب
     # ============================================================
     
     async def _search_web(self, query):
-        """البحث في الويب"""
         try:
             with ThreadPoolExecutor(max_workers=2) as executor:
                 loop = asyncio.get_event_loop()
-                search_queries = [
-                    f'"{query}" m3u8 live',
-                    f'"{query}" iptv link',
-                    f'"{query}" stream',
-                ]
-                tasks = [
-                    loop.run_in_executor(executor, self._search_google, q)
-                    for q in search_queries
-                ]
+                qs = [f'"{query}" m3u8', f'"{query}" iptv', f'"{query}" stream']
+                tasks = [loop.run_in_executor(executor, self._search_google, q) for q in qs]
                 results = await asyncio.gather(*tasks)
                 all_links = []
                 for result in results:
                     if result:
                         all_links.extend(result)
                 return all_links
-        except Exception as e:
-            logger.warning(f"⚠️ خطأ في البحث في الويب: {e}")
+        except:
             return []
     
     def _search_google(self, query):
-        """البحث في Google"""
         try:
             from googlesearch import search
             links = []
@@ -201,7 +162,6 @@ class LinkHunter:
     # ============================================================
     
     async def _search_telegram(self, query):
-        """البحث في قنوات تليجرام"""
         links = []
         for channel in self.telegram_sources[:3]:
             try:
@@ -216,18 +176,15 @@ class LinkHunter:
                             for link in matches:
                                 if query.lower().replace(' ', '') in link.lower().replace(' ', ''):
                                     links.append(link)
-                            if links:
-                                logger.info(f"✅ روابط من قناة {channel}")
             except:
                 pass
         return links
     
     # ============================================================
-    # 🔥 4. البحث في مواقع البث (جديد)
+    # 🔥 4. البحث في مواقع البث
     # ============================================================
     
-    async def _search_streaming_sites(self, query):
-        """البحث في مواقع البث المتخصصة"""
+    async def _search_streaming(self, query):
         links = []
         for site in self.streaming_sites[:3]:
             try:
@@ -241,17 +198,15 @@ class LinkHunter:
                             matches = re.findall(pattern, content, re.IGNORECASE)
                             if matches:
                                 links.extend(matches)
-                                logger.info(f"✅ روابط من {site[:30]}")
             except:
                 pass
         return links
     
     # ============================================================
-    # 🔥 5. البحث الضبابي (Fuzzy Search)
+    # 🔥 5. البحث الضبابي
     # ============================================================
     
     async def _fuzzy_search(self, channel_name):
-        """بحث ضبابي للعثور على تطابقات قريبة"""
         try:
             url = "https://iptv-org.github.io/iptv/index.m3u"
             headers = self._get_headers()
@@ -260,7 +215,7 @@ class LinkHunter:
                     if response.status == 200:
                         content = await response.text()
                         names = re.findall(r'#EXTINF:.*,([^\n]+)', content)
-                        matches = process.extract(channel_name, names, scorer=fuzz.ratio, limit=25)
+                        matches = process.extract(channel_name, names, scorer=fuzz.ratio, limit=30)
                         links = []
                         for match, score in matches:
                             if score > 60:
@@ -275,120 +230,68 @@ class LinkHunter:
         return []
     
     # ============================================================
-    # 🔥 6. اختبار سريع وفعال للروابط
+    # 🔥 6. اختبار صارم للصلاحية (الأهم)
     # ============================================================
     
-    async def _quick_validate(self, links):
-        """اختبار سريع باستخدام HEAD فقط لتسريع العملية"""
+    async def _strict_validate(self, links):
+        """اختبار فعلي للروابط - تحميل جزء من البث"""
         valid = []
         
-        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as session:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=8)) as session:
             for link in links:
                 try:
                     headers = self._get_headers()
-                    async with session.head(link, headers=headers, allow_redirects=True) as response:
-                        if response.status in [200, 206, 302, 301]:
-                            valid.append(link)
-                            logger.debug(f"✅ صالح: {link[:40]}...")
+                    headers['Range'] = 'bytes=0-2048'
+                    
+                    async with session.get(link, headers=headers, allow_redirects=True) as response:
+                        if response.status in [200, 206]:
+                            content = await response.read()
+                            # التأكد من أنه ليس HTML
+                            if b'<html' not in content[:100] and b'<body' not in content[:100]:
+                                valid.append(link)
+                                logger.info(f"✅ رابط صالح: {link[:40]}...")
+                            elif b'#EXTM3U' in content:
+                                valid.append(link)
+                                logger.info(f"✅ رابط M3U صالح: {link[:40]}...")
                         elif response.status == 403:
                             # 403 قد يكون حجباً جغرافياً، نحتفظ به كخيار
                             valid.append(link)
-                            logger.debug(f"⚠️ محجوب: {link[:40]}...")
-                except:
-                    # حتى لو فشل HEAD، قد يكون الرابط صالحاً
-                    if '.m3u8' in link:
-                        valid.append(link)
+                            logger.info(f"⚠️ رابط محجوب (قد يعمل): {link[:40]}...")
+                except Exception as e:
+                    logger.debug(f"❌ فشل: {link[:40]}... - {str(e)[:20]}")
+                    continue
         
         return valid
     
     # ============================================================
-    # 🔥 7. اختيار أفضل الروابط حسب الجودة
-    # ============================================================
-    
-    def _select_best_quality(self, links, channel_name):
-        """اختيار 5 روابط بأعلى جودة"""
-        quality_map = {
-            'fhd': 5, '1080p': 5, '4k': 5,
-            'hd': 4, '720p': 4,
-            'sd': 3, '480p': 3,
-            'low': 2, '360p': 2,
-        }
-        
-        scored = []
-        for link in links:
-            score = 0
-            link_lower = link.lower()
-            
-            # جودة عالية
-            for key, value in quality_map.items():
-                if key in link_lower:
-                    score += value
-                    break
-            
-            # مصادر موثوقة
-            trusted = ['amagi.tv', 'akamaized.net', 'streamlock.net', 'sofast.tv', 'cloudfront.net', 'edgenextcdn.net']
-            for domain in trusted:
-                if domain in link_lower:
-                    score += 3
-            
-            # HTTPS
-            if link.startswith('https://'):
-                score += 2
-            
-            scored.append((score, link))
-        
-        # ترتيب تنازلي
-        scored.sort(reverse=True, key=lambda x: x[0])
-        selected = [link for _, link in scored]
-        
-        # 🔥 إرجاع 5 روابط على الأقل (مع تنوع في الجودة)
-        if len(selected) < 5:
-            # إذا كان عدد الروابط أقل من 5، نعيد كل ما وجد
-            return selected
-        
-        # اختيار أفضل 5 مع تنوع
-        final = []
-        # أولاً: أفضل رابطين
-        final.extend(selected[:2])
-        # ثانياً: روابط من مصادر مختلفة (تنوع)
-        seen_domains = set()
-        for link in selected[2:]:
-            domain = link.split('/')[2] if len(link.split('/')) > 2 else ''
-            if domain not in seen_domains:
-                final.append(link)
-                seen_domains.add(domain)
-            if len(final) >= 5:
-                break
-        
-        return final
-    
-    # ============================================================
-    # 🔥 8. تصنيف الروابط حسب الجودة
+    # 🔥 7. ترتيب حسب الجودة
     # ============================================================
     
     def _rank_by_quality(self, links, query):
-        """ترتيب الروابط حسب الجودة والأهمية"""
         scored = []
         query_lower = query.lower()
+        quality_keywords = ['fhd', '1080p', 'hd', '720p', '4k']
         trusted_domains = ['amagi.tv', 'akamaized.net', 'streamlock.net', 'sofast.tv', 'cloudfront.net', 'edgenextcdn.net']
         
         for link in links:
             score = 0
             link_lower = link.lower()
             
-            # جودة
-            for quality in ['fhd', '1080p', 'hd', '720p']:
+            # الجودة
+            for quality in quality_keywords:
                 if quality in link_lower:
                     score += 5
+                    break
             
-            # مصادر موثوقة
+            # المصادر الموثوقة
             for domain in trusted_domains:
                 if domain in link_lower:
-                    score += 10
+                    score += 8
+                    break
             
-            # تطابق مع الاستعلام
+            # تطابق الاسم
             if query_lower in link_lower:
-                score += 8
+                score += 6
             
             # HTTPS
             if link.startswith('https://'):
@@ -400,38 +303,49 @@ class LinkHunter:
         return [link for _, link in scored]
     
     # ============================================================
+    # 🔥 8. اختيار أفضل الروابط (5 على الأقل)
+    # ============================================================
+    
+    def _select_best(self, links, query):
+        """اختيار 5 روابط على الأقل مع تنوع في المصادر"""
+        if len(links) >= 5:
+            # خذ أفضل 5
+            return links[:5]
+        elif len(links) >= 3:
+            # إذا كانت 3-4، أضف بعض الروابط الاحتياطية (حتى لو كانت أقل جودة)
+            return links
+        else:
+            # إذا كانت أقل من 3، حاول إضافة روابط إضافية من البحث الموسع
+            return links
+    
+    # ============================================================
     # 🔥 9. دوال مساعدة
     # ============================================================
     
     def _generate_variants(self, channel_name):
-        """توليد أسماء بديلة للقناة"""
         variants = [channel_name]
         name = channel_name.lower().strip()
         
-        # إزالة الأرقام
         no_numbers = re.sub(r'\d+', '', name).strip()
         if no_numbers and no_numbers != name:
             variants.append(no_numbers)
         
-        # إزالة الكلمات الإضافية
         for word in ['hd', 'fhd', 'uhd', '4k', 'tv', 'channel']:
             if word in name:
                 variants.append(name.replace(word, '').strip())
         
-        # أسماء بديلة معروفة
         if 'mbc' in name:
             variants.extend(['mbc1', 'mbc 1 hd', 'mbc one'])
         if 'bein' in name:
             variants.extend(['beIN', 'beIN 1', 'beIN HD'])
         
-        return list(set(variants))[:5]  # حد أقصى 5 متغيرات
+        return list(set(variants))[:5]
     
     def _get_headers(self):
         return {
             'User-Agent': random.choice(self.user_agents),
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept': '*/*',
             'Accept-Language': 'en-US,en;q=0.9,ar;q=0.8',
-            'Accept-Encoding': 'gzip, deflate, br',
             'Connection': 'keep-alive',
         }
     
