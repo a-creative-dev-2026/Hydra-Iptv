@@ -3,15 +3,7 @@ services:
     name: hydra-iptv
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
     envVars:
-      - key: HOST
-        value: 0.0.0.0
       - key: PORT
-        value: 10000
-      - key: DEBUG
-        value: false
-      - key: CACHE_TTL
-        value: 7200
-      - key: RATE_LIMIT_PER_MINUTE
-        value: 10
+        value: 5000
