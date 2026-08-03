@@ -13,26 +13,26 @@ AFRICA_COUNTRIES = {
     'za': {'name': 'جنوب أفريقيا', 'url': 'https://iptv-org.github.io/iptv/countries/za.m3u'},
     'dz': {'name': 'الجزائر', 'url': 'https://iptv-org.github.io/iptv/countries/dz.m3u'},
     'ma': {'name': 'المغرب', 'url': 'https://iptv-org.github.io/iptv/countries/ma.m3u'},
+    'tn': {'name': 'تونس', 'url': 'https://iptv-org.github.io/iptv/countries/tn.m3u'},
+    'ly': {'name': 'ليبيا', 'url': 'https://iptv-org.github.io/iptv/countries/ly.m3u'},
+    'sd': {'name': 'السودان', 'url': 'https://iptv-org.github.io/iptv/countries/sd.m3u'},
     'ke': {'name': 'كينيا', 'url': 'https://iptv-org.github.io/iptv/countries/ke.m3u'},
-    'et': {'name': 'إثيوبيا', 'url': 'https://iptv-org.github.io/iptv/countries/et.m3u'},
     'gh': {'name': 'غانا', 'url': 'https://iptv-org.github.io/iptv/countries/gh.m3u'},
+    'et': {'name': 'إثيوبيا', 'url': 'https://iptv-org.github.io/iptv/countries/et.m3u'},
     'ao': {'name': 'أنغولا', 'url': 'https://iptv-org.github.io/iptv/countries/ao.m3u'},
     'tz': {'name': 'تنزانيا', 'url': 'https://iptv-org.github.io/iptv/countries/tz.m3u'},
-    'cd': {'name': 'الكونغو الديمقراطية', 'url': 'https://iptv-org.github.io/iptv/countries/cd.m3u'},
-    'ci': {'name': 'ساحل العاج', 'url': 'https://iptv-org.github.io/iptv/countries/ci.m3u'},
-    'sd': {'name': 'السودان', 'url': 'https://iptv-org.github.io/iptv/countries/sd.m3u'},
     'ug': {'name': 'أوغندا', 'url': 'https://iptv-org.github.io/iptv/countries/ug.m3u'},
-    'tn': {'name': 'تونس', 'url': 'https://iptv-org.github.io/iptv/countries/tn.m3u'},
     'cm': {'name': 'الكاميرون', 'url': 'https://iptv-org.github.io/iptv/countries/cm.m3u'},
-    'ly': {'name': 'ليبيا', 'url': 'https://iptv-org.github.io/iptv/countries/ly.m3u'},
     'sn': {'name': 'السنغال', 'url': 'https://iptv-org.github.io/iptv/countries/sn.m3u'},
-    'zw': {'name': 'زيمبابوي', 'url': 'https://iptv-org.github.io/iptv/countries/zw.m3u'},
-    'zm': {'name': 'زامبيا', 'url': 'https://iptv-org.github.io/iptv/countries/zm.m3u'},
     'ml': {'name': 'مالي', 'url': 'https://iptv-org.github.io/iptv/countries/ml.m3u'},
     'bf': {'name': 'بوركينا فاسو', 'url': 'https://iptv-org.github.io/iptv/countries/bf.m3u'},
     'ne': {'name': 'النيجر', 'url': 'https://iptv-org.github.io/iptv/countries/ne.m3u'},
     'rw': {'name': 'رواندا', 'url': 'https://iptv-org.github.io/iptv/countries/rw.m3u'},
     'mg': {'name': 'مدغشقر', 'url': 'https://iptv-org.github.io/iptv/countries/mg.m3u'},
+    'ci': {'name': 'ساحل العاج', 'url': 'https://iptv-org.github.io/iptv/countries/ci.m3u'},
+    'cd': {'name': 'الكونغو الديمقراطية', 'url': 'https://iptv-org.github.io/iptv/countries/cd.m3u'},
+    'zm': {'name': 'زامبيا', 'url': 'https://iptv-org.github.io/iptv/countries/zm.m3u'},
+    'zw': {'name': 'زيمبابوي', 'url': 'https://iptv-org.github.io/iptv/countries/zw.m3u'},
 }
 
 # ============================================================
@@ -40,31 +40,31 @@ AFRICA_COUNTRIES = {
 # ============================================================
 
 ASIA_COUNTRIES = {
-    'cn': {'name': 'الصين', 'url': 'https://iptv-org.github.io/iptv/countries/cn.m3u'},
-    'in': {'name': 'الهند', 'url': 'https://iptv-org.github.io/iptv/countries/in.m3u'},
-    'jp': {'name': 'اليابان', 'url': 'https://iptv-org.github.io/iptv/countries/jp.m3u'},
-    'kr': {'name': 'كوريا الجنوبية', 'url': 'https://iptv-org.github.io/iptv/countries/kr.m3u'},
-    'id': {'name': 'إندونيسيا', 'url': 'https://iptv-org.github.io/iptv/countries/id.m3u'},
     'sa': {'name': 'السعودية', 'url': 'https://iptv-org.github.io/iptv/countries/sa.m3u'},
-    'tr': {'name': 'تركيا', 'url': 'https://iptv-org.github.io/iptv/countries/tr.m3u'},
-    'tw': {'name': 'تايوان', 'url': 'https://iptv-org.github.io/iptv/countries/tw.m3u'},
     'ae': {'name': 'الإمارات', 'url': 'https://iptv-org.github.io/iptv/countries/ae.m3u'},
-    'th': {'name': 'تايلاند', 'url': 'https://iptv-org.github.io/iptv/countries/th.m3u'},
-    'il': {'name': 'إسرائيل', 'url': 'https://iptv-org.github.io/iptv/countries/il.m3u'},
-    'my': {'name': 'ماليزيا', 'url': 'https://iptv-org.github.io/iptv/countries/my.m3u'},
-    'sg': {'name': 'سنغافورة', 'url': 'https://iptv-org.github.io/iptv/countries/sg.m3u'},
-    'ph': {'name': 'الفلبين', 'url': 'https://iptv-org.github.io/iptv/countries/ph.m3u'},
-    'vn': {'name': 'فيتنام', 'url': 'https://iptv-org.github.io/iptv/countries/vn.m3u'},
-    'pk': {'name': 'باكستان', 'url': 'https://iptv-org.github.io/iptv/countries/pk.m3u'},
-    'bd': {'name': 'بنغلاديش', 'url': 'https://iptv-org.github.io/iptv/countries/bd.m3u'},
-    'ir': {'name': 'إيران', 'url': 'https://iptv-org.github.io/iptv/countries/ir.m3u'},
-    'iq': {'name': 'العراق', 'url': 'https://iptv-org.github.io/iptv/countries/iq.m3u'},
     'qa': {'name': 'قطر', 'url': 'https://iptv-org.github.io/iptv/countries/qa.m3u'},
     'kw': {'name': 'الكويت', 'url': 'https://iptv-org.github.io/iptv/countries/kw.m3u'},
     'om': {'name': 'عمان', 'url': 'https://iptv-org.github.io/iptv/countries/om.m3u'},
+    'bh': {'name': 'البحرين', 'url': 'https://iptv-org.github.io/iptv/countries/bh.m3u'},
     'jo': {'name': 'الأردن', 'url': 'https://iptv-org.github.io/iptv/countries/jo.m3u'},
-    'sy': {'name': 'سوريا', 'url': 'https://iptv-org.github.io/iptv/countries/sy.m3u'},
     'lb': {'name': 'لبنان', 'url': 'https://iptv-org.github.io/iptv/countries/lb.m3u'},
+    'sy': {'name': 'سوريا', 'url': 'https://iptv-org.github.io/iptv/countries/sy.m3u'},
+    'iq': {'name': 'العراق', 'url': 'https://iptv-org.github.io/iptv/countries/iq.m3u'},
+    'ps': {'name': 'فلسطين', 'url': 'https://iptv-org.github.io/iptv/countries/ps.m3u'},
+    'ye': {'name': 'اليمن', 'url': 'https://iptv-org.github.io/iptv/countries/ye.m3u'},
+    'tr': {'name': 'تركيا', 'url': 'https://iptv-org.github.io/iptv/countries/tr.m3u'},
+    'ir': {'name': 'إيران', 'url': 'https://iptv-org.github.io/iptv/countries/ir.m3u'},
+    'pk': {'name': 'باكستان', 'url': 'https://iptv-org.github.io/iptv/countries/pk.m3u'},
+    'in': {'name': 'الهند', 'url': 'https://iptv-org.github.io/iptv/countries/in.m3u'},
+    'cn': {'name': 'الصين', 'url': 'https://iptv-org.github.io/iptv/countries/cn.m3u'},
+    'jp': {'name': 'اليابان', 'url': 'https://iptv-org.github.io/iptv/countries/jp.m3u'},
+    'kr': {'name': 'كوريا الجنوبية', 'url': 'https://iptv-org.github.io/iptv/countries/kr.m3u'},
+    'id': {'name': 'إندونيسيا', 'url': 'https://iptv-org.github.io/iptv/countries/id.m3u'},
+    'my': {'name': 'ماليزيا', 'url': 'https://iptv-org.github.io/iptv/countries/my.m3u'},
+    'sg': {'name': 'سنغافورة', 'url': 'https://iptv-org.github.io/iptv/countries/sg.m3u'},
+    'ph': {'name': 'الفلبين', 'url': 'https://iptv-org.github.io/iptv/countries/ph.m3u'},
+    'th': {'name': 'تايلاند', 'url': 'https://iptv-org.github.io/iptv/countries/th.m3u'},
+    'vn': {'name': 'فيتنام', 'url': 'https://iptv-org.github.io/iptv/countries/vn.m3u'},
 }
 
 # ============================================================
@@ -72,31 +72,31 @@ ASIA_COUNTRIES = {
 # ============================================================
 
 EUROPE_COUNTRIES = {
-    'de': {'name': 'ألمانيا', 'url': 'https://iptv-org.github.io/iptv/countries/de.m3u'},
     'gb': {'name': 'المملكة المتحدة', 'url': 'https://iptv-org.github.io/iptv/countries/gb.m3u'},
     'fr': {'name': 'فرنسا', 'url': 'https://iptv-org.github.io/iptv/countries/fr.m3u'},
+    'de': {'name': 'ألمانيا', 'url': 'https://iptv-org.github.io/iptv/countries/de.m3u'},
     'it': {'name': 'إيطاليا', 'url': 'https://iptv-org.github.io/iptv/countries/it.m3u'},
-    'ru': {'name': 'روسيا', 'url': 'https://iptv-org.github.io/iptv/countries/ru.m3u'},
     'es': {'name': 'إسبانيا', 'url': 'https://iptv-org.github.io/iptv/countries/es.m3u'},
+    'ru': {'name': 'روسيا', 'url': 'https://iptv-org.github.io/iptv/countries/ru.m3u'},
     'nl': {'name': 'هولندا', 'url': 'https://iptv-org.github.io/iptv/countries/nl.m3u'},
     'ch': {'name': 'سويسرا', 'url': 'https://iptv-org.github.io/iptv/countries/ch.m3u'},
-    'pl': {'name': 'بولندا', 'url': 'https://iptv-org.github.io/iptv/countries/pl.m3u'},
     'be': {'name': 'بلجيكا', 'url': 'https://iptv-org.github.io/iptv/countries/be.m3u'},
     'se': {'name': 'السويد', 'url': 'https://iptv-org.github.io/iptv/countries/se.m3u'},
-    'at': {'name': 'النمسا', 'url': 'https://iptv-org.github.io/iptv/countries/at.m3u'},
     'no': {'name': 'النرويج', 'url': 'https://iptv-org.github.io/iptv/countries/no.m3u'},
     'dk': {'name': 'الدنمارك', 'url': 'https://iptv-org.github.io/iptv/countries/dk.m3u'},
-    'ie': {'name': 'أيرلندا', 'url': 'https://iptv-org.github.io/iptv/countries/ie.m3u'},
-    'pt': {'name': 'البرتغال', 'url': 'https://iptv-org.github.io/iptv/countries/pt.m3u'},
-    'gr': {'name': 'اليونان', 'url': 'https://iptv-org.github.io/iptv/countries/gr.m3u'},
-    'cz': {'name': 'التشيك', 'url': 'https://iptv-org.github.io/iptv/countries/cz.m3u'},
-    'ro': {'name': 'رومانيا', 'url': 'https://iptv-org.github.io/iptv/countries/ro.m3u'},
     'fi': {'name': 'فنلندا', 'url': 'https://iptv-org.github.io/iptv/countries/fi.m3u'},
+    'pl': {'name': 'بولندا', 'url': 'https://iptv-org.github.io/iptv/countries/pl.m3u'},
+    'cz': {'name': 'التشيك', 'url': 'https://iptv-org.github.io/iptv/countries/cz.m3u'},
     'hu': {'name': 'المجر', 'url': 'https://iptv-org.github.io/iptv/countries/hu.m3u'},
-    'ua': {'name': 'أوكرانيا', 'url': 'https://iptv-org.github.io/iptv/countries/ua.m3u'},
-    'sk': {'name': 'سلوفاكيا', 'url': 'https://iptv-org.github.io/iptv/countries/sk.m3u'},
-    'hr': {'name': 'كرواتيا', 'url': 'https://iptv-org.github.io/iptv/countries/hr.m3u'},
+    'ro': {'name': 'رومانيا', 'url': 'https://iptv-org.github.io/iptv/countries/ro.m3u'},
     'bg': {'name': 'بلغاريا', 'url': 'https://iptv-org.github.io/iptv/countries/bg.m3u'},
+    'gr': {'name': 'اليونان', 'url': 'https://iptv-org.github.io/iptv/countries/gr.m3u'},
+    'pt': {'name': 'البرتغال', 'url': 'https://iptv-org.github.io/iptv/countries/pt.m3u'},
+    'ie': {'name': 'أيرلندا', 'url': 'https://iptv-org.github.io/iptv/countries/ie.m3u'},
+    'at': {'name': 'النمسا', 'url': 'https://iptv-org.github.io/iptv/countries/at.m3u'},
+    'ua': {'name': 'أوكرانيا', 'url': 'https://iptv-org.github.io/iptv/countries/ua.m3u'},
+    'hr': {'name': 'كرواتيا', 'url': 'https://iptv-org.github.io/iptv/countries/hr.m3u'},
+    'sk': {'name': 'سلوفاكيا', 'url': 'https://iptv-org.github.io/iptv/countries/sk.m3u'},
 }
 
 # ============================================================
@@ -194,10 +194,34 @@ CATEGORIES = {
 }
 
 # ============================================================
-# 8. دمج جميع الدول في قاموس واحد (متوافق مع proxy.py)
+# 8. قنوات مشهورة مع روابطها المباشرة (روابط جديدة تعمل)
 # ============================================================
 
-# هذا هو المتغير الذي يحتاجه proxy.py
+POPULAR_CHANNELS = {
+    # قنوات إخبارية - روابط مباشرة
+    'Al Jazeera': 'https://live-hls-web-aje.getaj.net/AJE/index.m3u8',  # قناة الجزيرة الإنجليزية
+    'Al Jazeera Arabic': 'https://live-hls-v3-aja.getaj.net/AJA-V3/index.m3u8',  # قناة الجزيرة العربية
+    'CNN': 'https://cnn-cnninternational-1-eu.rakuten.wurl.tv/63831a0c85fb46b5bf3b9fbd35a2331b.m3u8',  # CNN International
+    'BBC': 'https://vs-hls-push-ww-live.akamaized.net/x=4/i=urn:bbc:pips:service:bbc_news_channel_hd/t=3840/v=pv14/b=5070016/main.m3u8',  # BBC News
+    'BBC One': 'https://vs-hls-push-uk-live.akamaized.net/x=4/i=urn:bbc:pips:service:bbc_one_hd/t=3840/v=pv14/b=5070016/main.m3u8',  # BBC One HD
+    
+    # قنوات رياضية (قد لا تعمل جميعها بسبب التشفير)
+    'beIN Sports 1': 'https://beinsports.com/live',  # قد يكون مشفراً
+    'beIN Sports 2': 'https://beinsports.com/live',
+    'Sky Sports': 'https://skysports.com/live',
+    'ESPN': 'https://espn.com/live',
+    'FOX Sports': 'https://foxsports.com/live',
+    
+    # قنوات عربية وإخبارية إضافية
+    'Al Arabiya': 'https://live.alarabiya.net/alarabiapublish/alarabiya.smil/playlist.m3u8',
+    'France 24': 'https://france24.com/en/live',
+    'Russia Today': 'https://rt.com/live',
+}
+
+# ============================================================
+# 9. دمج جميع الدول في قاموس واحد (متوافق مع proxy.py)
+# ============================================================
+
 COUNTRY_CHANNELS = {
     **AFRICA_COUNTRIES,
     **ASIA_COUNTRIES,
@@ -207,17 +231,20 @@ COUNTRY_CHANNELS = {
     **OCEANIA_COUNTRIES,
 }
 
-# هذا هو المتغير الذي يحتاجه proxy.py للقنوات الرياضية
+# ============================================================
+# 10. قنوات رياضية إضافية (متوافق مع proxy.py)
+# ============================================================
+
 SPORTS_CHANNELS = {
-    'beIN Sports 1': 'https://iptv-org.github.io/iptv/channels/qa.m3u',
-    'beIN Sports 2': 'https://iptv-org.github.io/iptv/channels/qa.m3u',
-    'Sky Sports': 'https://iptv-org.github.io/iptv/channels/uk.m3u',
-    'ESPN': 'https://iptv-org.github.io/iptv/channels/us.m3u',
-    'FOX Sports': 'https://iptv-org.github.io/iptv/channels/us.m3u',
+    'beIN Sports 1': 'https://beinsports.com/live',
+    'beIN Sports 2': 'https://beinsports.com/live',
+    'Sky Sports': 'https://skysports.com/live',
+    'ESPN': 'https://espn.com/live',
+    'FOX Sports': 'https://foxsports.com/live',
 }
 
 # ============================================================
-# 9. دوال مساعدة (لـ app.py)
+# 11. دوال مساعدة (لـ app.py)
 # ============================================================
 
 def get_country_url(country_code):
@@ -244,14 +271,18 @@ def get_country_codes():
     """الحصول على قائمة رموز الدول"""
     return list(COUNTRY_CHANNELS.keys())
 
+def get_popular_channel_url(channel_name):
+    """الحصول على رابط قناة مشهورة"""
+    return POPULAR_CHANNELS.get(channel_name)
+
 # ============================================================
-# 10. للتوافق مع الإصدارات السابقة
+# 12. للتوافق مع الإصدارات السابقة
 # ============================================================
 
 ALL_COUNTRIES = COUNTRY_CHANNELS
 
 # ============================================================
-# 11. طباعة إحصائيات
+# 13. طباعة إحصائيات
 # ============================================================
 
 if __name__ == '__main__':
@@ -260,6 +291,7 @@ if __name__ == '__main__':
     print("=" * 60)
     print(f"📊 عدد الدول: {len(COUNTRY_CHANNELS)} دولة")
     print(f"📊 عدد التصنيفات: {len(CATEGORIES)} تصنيف")
+    print(f"📊 عدد القنوات المشهورة: {len(POPULAR_CHANNELS)} قناة")
     print("=" * 60)
     print("\n📋 الدول حسب المنطقة:")
     print(f"  • أفريقيا: {len(AFRICA_COUNTRIES)} دولة")
