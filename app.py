@@ -12,7 +12,7 @@ from channels import COUNTRY_CHANNELS, CATEGORIES, get_country_url, get_category
 app = Flask(__name__)
 CORS(app)
 
-# إعداد Rate Limiting
+# إعداد Rate Limiting (تخزين مؤقت في الذاكرة، مناسب للتجربة)
 limiter = Limiter(
     app=app,
     key_func=get_remote_address,
@@ -198,7 +198,8 @@ def merge_playlists(iptv_org, local):
 # ============================================================
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
+    # استخدام PORT من البيئة (Render يعينها تلقائياً)
+    port = int(os.environ.get('PORT', 10000))
     print("🐍 Hydra IPTV Server v3.0")
     print("=" * 60)
     print(f"✅ السيرفر يعمل على: http://0.0.0.0:{port}")
