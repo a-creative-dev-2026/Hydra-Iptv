@@ -5,16 +5,10 @@ services:
     buildCommand: |
       pip install --upgrade pip
       pip install --no-cache-dir -r requirements.txt
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --timeout 120 --workers 1
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
     envVars:
       - key: HOST
         value: 0.0.0.0
       - key: DEBUG
         value: false
-      - key: TELEGRAM_API_ID
-        value: YOUR_API_ID
-      - key: TELEGRAM_API_HASH
-        value: YOUR_API_HASH
-      - key: TELEGRAM_PHONE
-        value: YOUR_PHONE_NUMBER
-    plan: starter  # ✅ استخدم خطة مدفوعة للحصول على موارد أفضل (اختياري)
+      # ✅ لا تضع PORT هنا، دع Render يديره تلقائياً
