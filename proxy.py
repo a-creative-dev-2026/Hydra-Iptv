@@ -2,9 +2,10 @@ import requests
 from flask import Response, stream_with_context, redirect
 from cache import Cache
 from searcher import ChannelSearcher
-from channels import COUNTRY_CHANNELS, SPORTS_CHANNELS
+from channels import COUNTRY_CHANNELS, STATIC_CHANNELS
 import logging
 import re
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -20,25 +21,21 @@ class SmartProxy:
             'Accept': '*/*',
             'Accept-Language': 'en-US,en;q=0.9,ar;q=0.8',
         })
-        
         self._load_predefined_links()
     
     def _load_predefined_links(self):
+        """تحميل القنوات الثابتة والمحلية"""
         logger.info("📥 جاري تحميل الروابط المسبقة...")
         
-        # 1. تحميل القنوات المشهورة
-        try:
-            from channels import POPULAR_CHANNELS
-            for channel_name, url in POPULAR_CHANNELS.items():
+        # 1. تحميل القنوات الثابتة
+        for channel_name, data in STATIC_CHANNELS.items():
+            url = data['url']
+            if self._test_link_deep(url):  # اختبار عميق
                 links = self.cache.get(channel_name) or []
                 if url not in links:
-                    links.append(url)
+                    links.insert(0, url)
                     self.cache.set(channel_name, links)
-            logger.info(f"✅ تم تحميل {len(POPULAR_CHANNELS)} قناة مشهورة")
-        except ImportError:
-            logger.warning("⚠️ لا توجد قنوات مشهورة محددة")
-        except Exception as e:
-            logger.warning(f"⚠️ خطأ في تحميل القنوات المشهورة: {e}")
+                    logger.info(f"✅ قناة ثابتة تعمل: {channel_name}")
         
         # 2. تحميل قنوات الدول
         for country_code, data in COUNTRY_CHANNELS.items():
@@ -49,98 +46,98 @@ class SmartProxy:
                 links.append(url)
                 self.cache.set(channel_name, links)
         
-        # 3. تحميل القنوات الرياضية
-        for channel_name, url in SPORTS_CHANNELS.items():
-            links = self.cache.get(channel_name) or []
-            if url not in links:
-                links.append(url)
-                self.cache.set(channel_name, links)
-        
-        # ✅ 4. تحميل القنوات المحلية من playlist.m3u8 (الميزة المفقودة)
-        self._load_local_playlist()
-        
-        logger.info(f"✅ تم تحميل {len(self.cache.cache)} قناة مسبقة في الكاش")
-    
-    def _load_local_playlist(self):
-        """تحميل القنوات من ملف playlist.m3u8 وجعلها قابلة للبحث"""
-        try:
-            with open('playlist.m3u8', 'r', encoding='utf-8') as f:
-                content = f.read()
-            
-            # استخراج القنوات من ملف M3U
-            lines = content.splitlines()
-            channels = []
-            current_name = None
-            current_url = None
-            
-            for line in lines:
-                if line.startswith('#EXTINF'):
-                    # استخراج اسم القناة
-                    match = re.search(r',(.+)$', line)
-                    if match:
-                        current_name = match.group(1).strip()
-                elif line.startswith('http') and current_name:
-                    current_url = line.strip()
-                    # إضافة القناة إلى الكاش
-                    if current_name and current_url:
-                        links = self.cache.get(current_name) or []
-                        if current_url not in links:
-                            links.append(current_url)
-                            self.cache.set(current_name, links)
-                        # إعادة تعيين
-                        current_name = None
-                        current_url = None
-            
-            logger.info(f"✅ تم تحميل {len(channels)} قناة محلية من playlist.m3u8")
-        except Exception as e:
-            logger.warning(f"⚠️ خطأ في تحميل القائمة المحلية: {e}")
+        logger.info(f"✅ تم تحميل {len(self.cache.cache)} قناة في الكاش")
     
     def get_stream(self, channel_name):
-        """الحصول على تيار البث"""
-        # 1. البحث في الكاش (بما في ذلك القنوات المحلية)
+        """الحصول على تيار البث مع اختبار عميق"""
+        logger.info(f"📺 طلب بث: {channel_name}")
+        
+        # 1. التحقق من القناة الثابتة أولاً
+        if channel_name in STATIC_CHANNELS:
+            url = STATIC_CHANNELS[channel_name]['url']
+            if self._test_link_deep(url):
+                logger.info(f"✅ بث قناة ثابتة: {channel_name}")
+                return self._proxy_link(url)
+        
+        # 2. البحث في الكاش
         cached_links = self.cache.get(channel_name)
         if cached_links:
-            logger.info(f"📦 تم العثور على {len(cached_links)} رابط في الكاش لـ {channel_name}")
-            for link in cached_links:
-                if self._test_link(link):
+            logger.info(f"📦 تم العثور على {len(cached_links)} رابط في الكاش")
+            for link in cached_links[:10]:
+                if self._test_link_deep(link):
                     logger.info(f"✅ رابط يعمل: {link[:50]}...")
                     return self._proxy_link(link)
                 else:
                     logger.info(f"❌ رابط لا يعمل: {link[:50]}...")
+                    # إزالة الرابط التالف من الكاش
+                    self.cache.remove(channel_name)
         
-        # 2. البحث عن روابط جديدة
-        logger.info(f"🔍 لم يتم العثور على {channel_name} في الكاش، جاري البحث العميق...")
+        # 3. البحث عن روابط جديدة
+        logger.info(f"🔍 جاري البحث العميق عن {channel_name}...")
         links = self.searcher.search_channel(channel_name)
         
         if links:
-            logger.info(f"✅ تم العثور على {len(links)} رابط جديد!")
-            self.cache.set(channel_name, links)
-            return self._proxy_link(links[0])
+            for link in links[:10]:
+                if self._test_link_deep(link):
+                    logger.info(f"✅ تم العثور على رابط صالح: {link[:50]}...")
+                    self.cache.set(channel_name, [link])
+                    return self._proxy_link(link)
         
-        logger.error(f"❌ لم يتم العثور على روابط لـ {channel_name}")
+        logger.error(f"❌ لم يتم العثور على روابط صالحة لـ {channel_name}")
         return None
     
-    def _test_link(self, url):
+    def _test_link_deep(self, url):
+        """اختبار عميق للرابط (يتجاوز مجرد HEAD)"""
         try:
-            for attempt in range(2):
-                try:
-                    response = self.session.head(url, timeout=5, allow_redirects=True)
-                    if response.status_code in [200, 206, 302, 301]:
-                        return True
-                except:
-                    if attempt == 0:
-                        import time
-                        time.sleep(1)
-                    continue
-            return False
-        except:
+            # 1. اختبار HEAD أولاً
+            try:
+                head_response = self.session.head(url, timeout=5, allow_redirects=True)
+                if head_response.status_code not in [200, 206, 302, 301]:
+                    return False
+            except:
+                return False
+            
+            # 2. اختبار GET مع نطاق صغير (Range) لتحميل جزء من البث
+            headers = {'Range': 'bytes=0-1024'}
+            try:
+                response = self.session.get(url, headers=headers, timeout=10, stream=True)
+                if response.status_code not in [200, 206, 302, 301]:
+                    return False
+                
+                # 3. تحميل أول 1024 بايت للتحقق من أن المحتوى صالح
+                content = response.raw.read(1024)
+                if not content:
+                    return False
+                
+                # 4. التحقق من أن المحتوى ليس صفحة HTML (خطأ شائع)
+                content_str = content.decode('utf-8', errors='ignore')
+                if '<html' in content_str.lower() or '<body' in content_str.lower():
+                    logger.warning(f"⚠️ الرابط {url[:50]}... أعاد HTML بدلاً من بث")
+                    return False
+                
+                # 5. التحقق من وجود #EXTM3U أو #EXTINF (للملفات M3U)
+                if '#EXTM3U' in content_str or '#EXTINF' in content_str:
+                    return True
+                
+                # 6. التحقق من أن المحتوى يبدو كبث (غير فارغ)
+                if len(content) > 100:  # لا يقل عن 100 بايت
+                    return True
+                    
+            except Exception as e:
+                logger.warning(f"⚠️ فشل اختبار GET للرابط {url[:50]}: {e}")
+                return False
+            
+            return True
+        except Exception as e:
+            logger.warning(f"⚠️ خطأ في اختبار الرابط {url[:50]}: {e}")
             return False
     
     def _proxy_link(self, url):
+        """إعادة توجيه البث مع تحسين التخزين المؤقت"""
         try:
             return redirect(url, code=302)
         except Exception as e:
-            logger.error(f"❌ خطأ في التوجيه المباشر: {e}")
+            logger.warning(f"⚠️ فشل التوجيه المباشر، استخدام البروكسي: {e}")
         
         try:
             response = self.session.get(url, stream=True, timeout=30)
@@ -157,14 +154,3 @@ class SmartProxy:
         except Exception as e:
             logger.error(f"❌ خطأ في البروكسي: {e}")
             return None
-    
-    def add_channel(self, channel_name, url):
-        links = self.cache.get(channel_name) or []
-        if url not in links:
-            links.append(url)
-            self.cache.set(channel_name, links)
-            return True
-        return False
-    
-    def get_channels_by_country(self, country_code):
-        return COUNTRY_CHANNELS.get(country_code, {}).get('name')
