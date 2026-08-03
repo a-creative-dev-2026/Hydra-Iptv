@@ -3,12 +3,8 @@
 # المصدر: iptv-org.github.io + قنوات محلية
 # ============================================================
 
-# ============================================================
-# 1. روابط قوائم الدول (جميع المناطق)
-# ============================================================
-
 COUNTRY_CHANNELS = {
-    # أفريقيا (25 دولة)
+    # أفريقيا
     'ng': {'name': 'نيجيريا', 'url': 'https://iptv-org.github.io/iptv/countries/ng.m3u'},
     'eg': {'name': 'مصر', 'url': 'https://iptv-org.github.io/iptv/countries/eg.m3u'},
     'za': {'name': 'جنوب أفريقيا', 'url': 'https://iptv-org.github.io/iptv/countries/za.m3u'},
@@ -35,7 +31,7 @@ COUNTRY_CHANNELS = {
     'zm': {'name': 'زامبيا', 'url': 'https://iptv-org.github.io/iptv/countries/zm.m3u'},
     'zw': {'name': 'زيمبابوي', 'url': 'https://iptv-org.github.io/iptv/countries/zw.m3u'},
     
-    # آسيا (25 دولة)
+    # آسيا (مختصر)
     'sa': {'name': 'السعودية', 'url': 'https://iptv-org.github.io/iptv/countries/sa.m3u'},
     'ae': {'name': 'الإمارات', 'url': 'https://iptv-org.github.io/iptv/countries/ae.m3u'},
     'qa': {'name': 'قطر', 'url': 'https://iptv-org.github.io/iptv/countries/qa.m3u'},
@@ -62,7 +58,7 @@ COUNTRY_CHANNELS = {
     'th': {'name': 'تايلاند', 'url': 'https://iptv-org.github.io/iptv/countries/th.m3u'},
     'vn': {'name': 'فيتنام', 'url': 'https://iptv-org.github.io/iptv/countries/vn.m3u'},
     
-    # أوروبا (25 دولة)
+    # أوروبا (مختصر)
     'gb': {'name': 'المملكة المتحدة', 'url': 'https://iptv-org.github.io/iptv/countries/gb.m3u'},
     'fr': {'name': 'فرنسا', 'url': 'https://iptv-org.github.io/iptv/countries/fr.m3u'},
     'de': {'name': 'ألمانيا', 'url': 'https://iptv-org.github.io/iptv/countries/de.m3u'},
@@ -89,7 +85,7 @@ COUNTRY_CHANNELS = {
     'hr': {'name': 'كرواتيا', 'url': 'https://iptv-org.github.io/iptv/countries/hr.m3u'},
     'sk': {'name': 'سلوفاكيا', 'url': 'https://iptv-org.github.io/iptv/countries/sk.m3u'},
     
-    # أمريكا الشمالية (25 دولة)
+    # أمريكا الشمالية
     'us': {'name': 'الولايات المتحدة', 'url': 'https://iptv-org.github.io/iptv/countries/us.m3u'},
     'ca': {'name': 'كندا', 'url': 'https://iptv-org.github.io/iptv/countries/ca.m3u'},
     'mx': {'name': 'المكسيك', 'url': 'https://iptv-org.github.io/iptv/countries/mx.m3u'},
@@ -116,7 +112,7 @@ COUNTRY_CHANNELS = {
     'dm': {'name': 'دومينيكا', 'url': 'https://iptv-org.github.io/iptv/countries/dm.m3u'},
     'cw': {'name': 'كوراساو', 'url': 'https://iptv-org.github.io/iptv/countries/cw.m3u'},
     
-    # أمريكا الجنوبية (12 دولة)
+    # أمريكا الجنوبية
     'br': {'name': 'البرازيل', 'url': 'https://iptv-org.github.io/iptv/countries/br.m3u'},
     'ar': {'name': 'الأرجنتين', 'url': 'https://iptv-org.github.io/iptv/countries/ar.m3u'},
     'co': {'name': 'كولومبيا', 'url': 'https://iptv-org.github.io/iptv/countries/co.m3u'},
@@ -130,7 +126,7 @@ COUNTRY_CHANNELS = {
     'gy': {'name': 'غيانا', 'url': 'https://iptv-org.github.io/iptv/countries/gy.m3u'},
     'sr': {'name': 'سورينام', 'url': 'https://iptv-org.github.io/iptv/countries/sr.m3u'},
     
-    # أوقيانوسيا (14 دولة)
+    # أوقيانوسيا
     'au': {'name': 'أستراليا', 'url': 'https://iptv-org.github.io/iptv/countries/au.m3u'},
     'nz': {'name': 'نيوزيلندا', 'url': 'https://iptv-org.github.io/iptv/countries/nz.m3u'},
     'pg': {'name': 'بابوا غينيا الجديدة', 'url': 'https://iptv-org.github.io/iptv/countries/pg.m3u'},
@@ -148,7 +144,7 @@ COUNTRY_CHANNELS = {
 }
 
 # ============================================================
-# 2. روابط قوائم التصنيفات
+# التصنيفات
 # ============================================================
 
 CATEGORIES = {
@@ -170,11 +166,10 @@ CATEGORIES = {
 }
 
 # ============================================================
-# 3. قنوات مشهورة مع روابطها المباشرة
+# قنوات مشهورة
 # ============================================================
 
 POPULAR_CHANNELS = {
-    # قنوات إخبارية
     'Al Jazeera': 'https://live-hls-web-aje.getaj.net/AJE/index.m3u8',
     'Al Jazeera Arabic': 'https://live-hls-v3-aja.getaj.net/AJA-V3/index.m3u8',
     'CNN': 'https://cnn-cnninternational-1-eu.rakuten.wurl.tv/63831a0c85fb46b5bf3b9fbd35a2331b.m3u8',
@@ -183,25 +178,12 @@ POPULAR_CHANNELS = {
     'Al Arabiya': 'https://live.alarabiya.net/alarabiapublish/alarabiya.smil/playlist.m3u8',
     'France 24': 'https://france24.com/en/live',
     'Russia Today': 'https://rt.com/live',
-    
-    # قنوات رياضية
     'beIN Sports 1': 'https://beinsports.com/live',
     'beIN Sports 2': 'https://beinsports.com/live',
     'Sky Sports': 'https://skysports.com/live',
     'ESPN': 'https://espn.com/live',
     'FOX Sports': 'https://foxsports.com/live',
-    
-    # قنوات ترفيهية
-    'MBC 1': 'https://mbc1.com/live',
-    'MBC 2': 'https://mbc2.com/live',
-    'MBC Action': 'https://mbcaction.com/live',
-    'MBC Drama': 'https://mbcdrama.com/live',
-    'MBC Masr': 'https://mbcmasr.com/live',
 }
-
-# ============================================================
-# 4. قنوات رياضية إضافية (متوافق مع proxy.py)
-# ============================================================
 
 SPORTS_CHANNELS = {
     'beIN Sports 1': 'https://beinsports.com/live',
@@ -212,46 +194,26 @@ SPORTS_CHANNELS = {
 }
 
 # ============================================================
-# 5. دوال مساعدة
+# دوال مساعدة
 # ============================================================
 
 def get_country_url(country_code):
-    """الحصول على رابط قائمة دولة معينة"""
     return COUNTRY_CHANNELS.get(country_code, {}).get('url')
 
 def get_country_name(country_code):
-    """الحصول على اسم الدولة بالعربية"""
     return COUNTRY_CHANNELS.get(country_code, {}).get('name', country_code.upper())
 
 def get_category_url(category):
-    """الحصول على رابط قائمة تصنيف معين"""
     return CATEGORIES.get(category, {}).get('url')
 
 def get_all_countries():
-    """الحصول على جميع الدول"""
     return COUNTRY_CHANNELS
 
 def get_all_categories():
-    """الحصول على جميع التصنيفات"""
     return CATEGORIES
 
 def get_country_codes():
-    """الحصول على قائمة رموز الدول"""
     return list(COUNTRY_CHANNELS.keys())
 
 def get_popular_channel_url(channel_name):
-    """الحصول على رابط قناة مشهورة"""
     return POPULAR_CHANNELS.get(channel_name)
-
-# ============================================================
-# 6. إحصائيات
-# ============================================================
-
-if __name__ == '__main__':
-    print("=" * 60)
-    print("🌍 إحصائيات قاعدة بيانات Hydra-IPTV")
-    print("=" * 60)
-    print(f"📊 عدد الدول: {len(COUNTRY_CHANNELS)} دولة")
-    print(f"📊 عدد التصنيفات: {len(CATEGORIES)} تصنيف")
-    print(f"📊 عدد القنوات المشهورة: {len(POPULAR_CHANNELS)} قناة")
-    print("=" * 60)
