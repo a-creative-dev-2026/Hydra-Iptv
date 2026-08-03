@@ -1,13 +1,14 @@
 # ============================================================
 # روابط القنوات المباشرة حسب الدولة والتصنيف
-# المصدر: iptv-org.github.io
+# المصدر: iptv-org.github.io + قنوات محلية
 # ============================================================
 
 # ============================================================
-# 1. روابط قوائم الدول (أفريقيا)
+# 1. روابط قوائم الدول (جميع المناطق)
 # ============================================================
 
-AFRICA_COUNTRIES = {
+COUNTRY_CHANNELS = {
+    # أفريقيا (25 دولة)
     'ng': {'name': 'نيجيريا', 'url': 'https://iptv-org.github.io/iptv/countries/ng.m3u'},
     'eg': {'name': 'مصر', 'url': 'https://iptv-org.github.io/iptv/countries/eg.m3u'},
     'za': {'name': 'جنوب أفريقيا', 'url': 'https://iptv-org.github.io/iptv/countries/za.m3u'},
@@ -33,13 +34,8 @@ AFRICA_COUNTRIES = {
     'cd': {'name': 'الكونغو الديمقراطية', 'url': 'https://iptv-org.github.io/iptv/countries/cd.m3u'},
     'zm': {'name': 'زامبيا', 'url': 'https://iptv-org.github.io/iptv/countries/zm.m3u'},
     'zw': {'name': 'زيمبابوي', 'url': 'https://iptv-org.github.io/iptv/countries/zw.m3u'},
-}
-
-# ============================================================
-# 2. روابط قوائم الدول (آسيا)
-# ============================================================
-
-ASIA_COUNTRIES = {
+    
+    # آسيا (25 دولة)
     'sa': {'name': 'السعودية', 'url': 'https://iptv-org.github.io/iptv/countries/sa.m3u'},
     'ae': {'name': 'الإمارات', 'url': 'https://iptv-org.github.io/iptv/countries/ae.m3u'},
     'qa': {'name': 'قطر', 'url': 'https://iptv-org.github.io/iptv/countries/qa.m3u'},
@@ -65,13 +61,8 @@ ASIA_COUNTRIES = {
     'ph': {'name': 'الفلبين', 'url': 'https://iptv-org.github.io/iptv/countries/ph.m3u'},
     'th': {'name': 'تايلاند', 'url': 'https://iptv-org.github.io/iptv/countries/th.m3u'},
     'vn': {'name': 'فيتنام', 'url': 'https://iptv-org.github.io/iptv/countries/vn.m3u'},
-}
-
-# ============================================================
-# 3. روابط قوائم الدول (أوروبا)
-# ============================================================
-
-EUROPE_COUNTRIES = {
+    
+    # أوروبا (25 دولة)
     'gb': {'name': 'المملكة المتحدة', 'url': 'https://iptv-org.github.io/iptv/countries/gb.m3u'},
     'fr': {'name': 'فرنسا', 'url': 'https://iptv-org.github.io/iptv/countries/fr.m3u'},
     'de': {'name': 'ألمانيا', 'url': 'https://iptv-org.github.io/iptv/countries/de.m3u'},
@@ -97,13 +88,8 @@ EUROPE_COUNTRIES = {
     'ua': {'name': 'أوكرانيا', 'url': 'https://iptv-org.github.io/iptv/countries/ua.m3u'},
     'hr': {'name': 'كرواتيا', 'url': 'https://iptv-org.github.io/iptv/countries/hr.m3u'},
     'sk': {'name': 'سلوفاكيا', 'url': 'https://iptv-org.github.io/iptv/countries/sk.m3u'},
-}
-
-# ============================================================
-# 4. روابط قوائم الدول (أمريكا الشمالية)
-# ============================================================
-
-NORTH_AMERICA_COUNTRIES = {
+    
+    # أمريكا الشمالية (25 دولة)
     'us': {'name': 'الولايات المتحدة', 'url': 'https://iptv-org.github.io/iptv/countries/us.m3u'},
     'ca': {'name': 'كندا', 'url': 'https://iptv-org.github.io/iptv/countries/ca.m3u'},
     'mx': {'name': 'المكسيك', 'url': 'https://iptv-org.github.io/iptv/countries/mx.m3u'},
@@ -129,13 +115,8 @@ NORTH_AMERICA_COUNTRIES = {
     'kn': {'name': 'سانت كيتس ونيفيس', 'url': 'https://iptv-org.github.io/iptv/countries/kn.m3u'},
     'dm': {'name': 'دومينيكا', 'url': 'https://iptv-org.github.io/iptv/countries/dm.m3u'},
     'cw': {'name': 'كوراساو', 'url': 'https://iptv-org.github.io/iptv/countries/cw.m3u'},
-}
-
-# ============================================================
-# 5. روابط قوائم الدول (أمريكا الجنوبية)
-# ============================================================
-
-SOUTH_AMERICA_COUNTRIES = {
+    
+    # أمريكا الجنوبية (12 دولة)
     'br': {'name': 'البرازيل', 'url': 'https://iptv-org.github.io/iptv/countries/br.m3u'},
     'ar': {'name': 'الأرجنتين', 'url': 'https://iptv-org.github.io/iptv/countries/ar.m3u'},
     'co': {'name': 'كولومبيا', 'url': 'https://iptv-org.github.io/iptv/countries/co.m3u'},
@@ -148,13 +129,8 @@ SOUTH_AMERICA_COUNTRIES = {
     'uy': {'name': 'أوروغواي', 'url': 'https://iptv-org.github.io/iptv/countries/uy.m3u'},
     'gy': {'name': 'غيانا', 'url': 'https://iptv-org.github.io/iptv/countries/gy.m3u'},
     'sr': {'name': 'سورينام', 'url': 'https://iptv-org.github.io/iptv/countries/sr.m3u'},
-}
-
-# ============================================================
-# 6. روابط قوائم الدول (أوقيانوسيا)
-# ============================================================
-
-OCEANIA_COUNTRIES = {
+    
+    # أوقيانوسيا (14 دولة)
     'au': {'name': 'أستراليا', 'url': 'https://iptv-org.github.io/iptv/countries/au.m3u'},
     'nz': {'name': 'نيوزيلندا', 'url': 'https://iptv-org.github.io/iptv/countries/nz.m3u'},
     'pg': {'name': 'بابوا غينيا الجديدة', 'url': 'https://iptv-org.github.io/iptv/countries/pg.m3u'},
@@ -172,7 +148,7 @@ OCEANIA_COUNTRIES = {
 }
 
 # ============================================================
-# 7. روابط قوائم التصنيفات
+# 2. روابط قوائم التصنيفات
 # ============================================================
 
 CATEGORIES = {
@@ -194,45 +170,37 @@ CATEGORIES = {
 }
 
 # ============================================================
-# 8. قنوات مشهورة مع روابطها المباشرة (روابط جديدة تعمل)
+# 3. قنوات مشهورة مع روابطها المباشرة
 # ============================================================
 
 POPULAR_CHANNELS = {
-    # قنوات إخبارية - روابط مباشرة
-    'Al Jazeera': 'https://live-hls-web-aje.getaj.net/AJE/index.m3u8',  # قناة الجزيرة الإنجليزية
-    'Al Jazeera Arabic': 'https://live-hls-v3-aja.getaj.net/AJA-V3/index.m3u8',  # قناة الجزيرة العربية
-    'CNN': 'https://cnn-cnninternational-1-eu.rakuten.wurl.tv/63831a0c85fb46b5bf3b9fbd35a2331b.m3u8',  # CNN International
-    'BBC': 'https://vs-hls-push-ww-live.akamaized.net/x=4/i=urn:bbc:pips:service:bbc_news_channel_hd/t=3840/v=pv14/b=5070016/main.m3u8',  # BBC News
-    'BBC One': 'https://vs-hls-push-uk-live.akamaized.net/x=4/i=urn:bbc:pips:service:bbc_one_hd/t=3840/v=pv14/b=5070016/main.m3u8',  # BBC One HD
+    # قنوات إخبارية
+    'Al Jazeera': 'https://live-hls-web-aje.getaj.net/AJE/index.m3u8',
+    'Al Jazeera Arabic': 'https://live-hls-v3-aja.getaj.net/AJA-V3/index.m3u8',
+    'CNN': 'https://cnn-cnninternational-1-eu.rakuten.wurl.tv/63831a0c85fb46b5bf3b9fbd35a2331b.m3u8',
+    'BBC': 'https://vs-hls-push-ww-live.akamaized.net/x=4/i=urn:bbc:pips:service:bbc_news_channel_hd/t=3840/v=pv14/b=5070016/main.m3u8',
+    'BBC One': 'https://vs-hls-push-uk-live.akamaized.net/x=4/i=urn:bbc:pips:service:bbc_one_hd/t=3840/v=pv14/b=5070016/main.m3u8',
+    'Al Arabiya': 'https://live.alarabiya.net/alarabiapublish/alarabiya.smil/playlist.m3u8',
+    'France 24': 'https://france24.com/en/live',
+    'Russia Today': 'https://rt.com/live',
     
-    # قنوات رياضية (قد لا تعمل جميعها بسبب التشفير)
-    'beIN Sports 1': 'https://beinsports.com/live',  # قد يكون مشفراً
+    # قنوات رياضية
+    'beIN Sports 1': 'https://beinsports.com/live',
     'beIN Sports 2': 'https://beinsports.com/live',
     'Sky Sports': 'https://skysports.com/live',
     'ESPN': 'https://espn.com/live',
     'FOX Sports': 'https://foxsports.com/live',
     
-    # قنوات عربية وإخبارية إضافية
-    'Al Arabiya': 'https://live.alarabiya.net/alarabiapublish/alarabiya.smil/playlist.m3u8',
-    'France 24': 'https://france24.com/en/live',
-    'Russia Today': 'https://rt.com/live',
+    # قنوات ترفيهية
+    'MBC 1': 'https://mbc1.com/live',
+    'MBC 2': 'https://mbc2.com/live',
+    'MBC Action': 'https://mbcaction.com/live',
+    'MBC Drama': 'https://mbcdrama.com/live',
+    'MBC Masr': 'https://mbcmasr.com/live',
 }
 
 # ============================================================
-# 9. دمج جميع الدول في قاموس واحد (متوافق مع proxy.py)
-# ============================================================
-
-COUNTRY_CHANNELS = {
-    **AFRICA_COUNTRIES,
-    **ASIA_COUNTRIES,
-    **EUROPE_COUNTRIES,
-    **NORTH_AMERICA_COUNTRIES,
-    **SOUTH_AMERICA_COUNTRIES,
-    **OCEANIA_COUNTRIES,
-}
-
-# ============================================================
-# 10. قنوات رياضية إضافية (متوافق مع proxy.py)
+# 4. قنوات رياضية إضافية (متوافق مع proxy.py)
 # ============================================================
 
 SPORTS_CHANNELS = {
@@ -244,7 +212,7 @@ SPORTS_CHANNELS = {
 }
 
 # ============================================================
-# 11. دوال مساعدة (لـ app.py)
+# 5. دوال مساعدة
 # ============================================================
 
 def get_country_url(country_code):
@@ -276,13 +244,7 @@ def get_popular_channel_url(channel_name):
     return POPULAR_CHANNELS.get(channel_name)
 
 # ============================================================
-# 12. للتوافق مع الإصدارات السابقة
-# ============================================================
-
-ALL_COUNTRIES = COUNTRY_CHANNELS
-
-# ============================================================
-# 13. طباعة إحصائيات
+# 6. إحصائيات
 # ============================================================
 
 if __name__ == '__main__':
@@ -292,12 +254,4 @@ if __name__ == '__main__':
     print(f"📊 عدد الدول: {len(COUNTRY_CHANNELS)} دولة")
     print(f"📊 عدد التصنيفات: {len(CATEGORIES)} تصنيف")
     print(f"📊 عدد القنوات المشهورة: {len(POPULAR_CHANNELS)} قناة")
-    print("=" * 60)
-    print("\n📋 الدول حسب المنطقة:")
-    print(f"  • أفريقيا: {len(AFRICA_COUNTRIES)} دولة")
-    print(f"  • آسيا: {len(ASIA_COUNTRIES)} دولة")
-    print(f"  • أوروبا: {len(EUROPE_COUNTRIES)} دولة")
-    print(f"  • أمريكا الشمالية: {len(NORTH_AMERICA_COUNTRIES)} دولة")
-    print(f"  • أمريكا الجنوبية: {len(SOUTH_AMERICA_COUNTRIES)} دولة")
-    print(f"  • أوقيانوسيا: {len(OCEANIA_COUNTRIES)} دولة")
     print("=" * 60)
