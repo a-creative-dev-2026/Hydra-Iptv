@@ -194,10 +194,11 @@ CATEGORIES = {
 }
 
 # ============================================================
-# 8. دمج جميع الدول في قاموس واحد
+# 8. دمج جميع الدول في قاموس واحد (متوافق مع proxy.py)
 # ============================================================
 
-ALL_COUNTRIES = {
+# هذا هو المتغير الذي يحتاجه proxy.py
+COUNTRY_CHANNELS = {
     **AFRICA_COUNTRIES,
     **ASIA_COUNTRIES,
     **EUROPE_COUNTRIES,
@@ -206,17 +207,26 @@ ALL_COUNTRIES = {
     **OCEANIA_COUNTRIES,
 }
 
+# هذا هو المتغير الذي يحتاجه proxy.py للقنوات الرياضية
+SPORTS_CHANNELS = {
+    'beIN Sports 1': 'https://iptv-org.github.io/iptv/channels/qa.m3u',
+    'beIN Sports 2': 'https://iptv-org.github.io/iptv/channels/qa.m3u',
+    'Sky Sports': 'https://iptv-org.github.io/iptv/channels/uk.m3u',
+    'ESPN': 'https://iptv-org.github.io/iptv/channels/us.m3u',
+    'FOX Sports': 'https://iptv-org.github.io/iptv/channels/us.m3u',
+}
+
 # ============================================================
-# 9. دوال مساعدة
+# 9. دوال مساعدة (لـ app.py)
 # ============================================================
 
 def get_country_url(country_code):
     """الحصول على رابط قائمة دولة معينة"""
-    return ALL_COUNTRIES.get(country_code, {}).get('url')
+    return COUNTRY_CHANNELS.get(country_code, {}).get('url')
 
 def get_country_name(country_code):
     """الحصول على اسم الدولة بالعربية"""
-    return ALL_COUNTRIES.get(country_code, {}).get('name', country_code.upper())
+    return COUNTRY_CHANNELS.get(country_code, {}).get('name', country_code.upper())
 
 def get_category_url(category):
     """الحصول على رابط قائمة تصنيف معين"""
@@ -224,7 +234,7 @@ def get_category_url(category):
 
 def get_all_countries():
     """الحصول على جميع الدول"""
-    return ALL_COUNTRIES
+    return COUNTRY_CHANNELS
 
 def get_all_categories():
     """الحصول على جميع التصنيفات"""
@@ -232,17 +242,23 @@ def get_all_categories():
 
 def get_country_codes():
     """الحصول على قائمة رموز الدول"""
-    return list(ALL_COUNTRIES.keys())
+    return list(COUNTRY_CHANNELS.keys())
 
 # ============================================================
-# 10. طباعة إحصائيات
+# 10. للتوافق مع الإصدارات السابقة
+# ============================================================
+
+ALL_COUNTRIES = COUNTRY_CHANNELS
+
+# ============================================================
+# 11. طباعة إحصائيات
 # ============================================================
 
 if __name__ == '__main__':
     print("=" * 60)
     print("🌍 إحصائيات قاعدة بيانات Hydra-IPTV")
     print("=" * 60)
-    print(f"📊 عدد الدول: {len(ALL_COUNTRIES)} دولة")
+    print(f"📊 عدد الدول: {len(COUNTRY_CHANNELS)} دولة")
     print(f"📊 عدد التصنيفات: {len(CATEGORIES)} تصنيف")
     print("=" * 60)
     print("\n📋 الدول حسب المنطقة:")
