@@ -2,7 +2,7 @@ import requests
 from flask import Response, stream_with_context, redirect
 from cache import Cache
 from searcher import ChannelSearcher
-from channels import COUNTRY_CHANNELS, STATIC_CHANNELS, get_static_channel
+from channels import COUNTRY_CHANNELS  # ✅ استيراد الدول فقط
 import logging
 import re
 import time
@@ -26,16 +26,7 @@ class SmartProxy:
     def _load_predefined_links(self):
         logger.info("📥 جاري تحميل الروابط المسبقة...")
         
-        # 1. تحميل القنوات الثابتة
-        for channel_name, data in STATIC_CHANNELS.items():
-            url = data['url']
-            links = self.cache.get(channel_name) or []
-            if url not in links:
-                links.insert(0, url)
-                self.cache.set(channel_name, links)
-        logger.info(f"✅ تم تحميل {len(STATIC_CHANNELS)} قناة ثابتة")
-        
-        # 2. تحميل قنوات الدول
+        # ✅ تحميل قنوات الدول فقط
         for country_code, data in COUNTRY_CHANNELS.items():
             channel_name = data['name']
             url = data['url']
@@ -49,14 +40,7 @@ class SmartProxy:
     def get_stream(self, channel_name):
         logger.info(f"📺 طلب بث: {channel_name}")
         
-        # 1. التحقق من القناة الثابتة
-        if channel_name in STATIC_CHANNELS:
-            url = STATIC_CHANNELS[channel_name]['url']
-            if self._test_link(url):
-                logger.info(f"✅ بث قناة ثابتة: {channel_name}")
-                return self._proxy_link(url)
-        
-        # 2. البحث في الكاش
+        # ✅ البحث في الكاش فقط
         cached_links = self.cache.get(channel_name)
         if cached_links:
             logger.info(f"📦 تم العثور على {len(cached_links)} رابط في الكاش")
@@ -67,7 +51,7 @@ class SmartProxy:
                 else:
                     logger.info(f"❌ رابط لا يعمل: {link[:50]}...")
         
-        # 3. البحث عن روابط جديدة
+        # ✅ البحث عن روابط جديدة
         logger.info(f"🔍 جاري البحث عن {channel_name}...")
         links = self.searcher.search_channel(channel_name)
         
