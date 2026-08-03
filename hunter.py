@@ -88,7 +88,7 @@ class LinkHunter:
                 valid_links = await self._quick_validate(fuzzy_links[:10])
         
         logger.info(f"✅ تم العثور على {len(valid_links)} رابط صالح لـ {channel_name}")
-        return valid_links
+        return valid_links[:max_results]
     
     # ============================================================
     # 1. المصادر الأساسية
@@ -222,7 +222,6 @@ class LinkHunter:
     async def _search_telegram(self, channel_name):
         """البحث في قنوات تليجرام (محاكاة باستخدام t.me)"""
         try:
-            # محاولة جلب من t.me (الواجهة العامة)
             links = []
             for channel in self.telegram_sources[:3]:
                 try:
@@ -249,19 +248,15 @@ class LinkHunter:
     async def _fuzzy_search(self, channel_name):
         """البحث الضبابي باستخدام الاسم بالكامل"""
         try:
-            # جلب قائمة القنوات من iptv-org
             url = "https://iptv-org.github.io/iptv/index.m3u"
             async with self.session.get(url) as response:
                 if response.status == 200:
                     content = await response.text()
-                    # استخراج جميع أسماء القنوات
                     names = re.findall(r'#EXTINF:.*,([^\n]+)', content)
-                    # البحث عن التطابقات الضبابية
                     matches = process.extract(channel_name, names, scorer=fuzz.ratio, limit=10)
                     links = []
                     for match, score in matches:
                         if score > 70:
-                            # جلب الرابط لهذه القناة
                             pattern = rf'#EXTINF:.*,{re.escape(match)}.*\n(https?://[^\s]+)'
                             found = re.findall(pattern, content, re.IGNORECASE)
                             if found:
@@ -295,27 +290,22 @@ class LinkHunter:
             score = 0
             link_lower = link.lower()
             
-            # الروابط من مصادر موثوقة
             trusted = ['amagi.tv', 'akamaized.net', 'streamlock.net', 'sofast.tv']
             for domain in trusted:
                 if domain in link_lower:
                     score += 10
             
-            # الروابط التي تحتوي على اسم القناة
             if query_lower in link_lower:
                 score += 5
             
-            # الروابط الآمنة (HTTPS)
             if link.startswith('https://'):
                 score += 3
             
-            # الروابط من GitHub (قد تكون مفتوحة المصدر)
             if 'github' in link_lower:
                 score += 2
             
             scored.append((score, link))
         
-        # ترتيب تنازلي حسب النقاط
         scored.sort(reverse=True, key=lambda x: x[0])
         return [link for score, link in scored]
     
@@ -329,7 +319,6 @@ class LinkHunter:
                     headers = {'Range': 'bytes=0-1024'}
                     async with session.get(link, headers=headers, timeout=5) as response:
                         if response.status in [200, 206]:
-                            # قراءة جزء صغير للتأكد من أنه ليس HTML
                             content = await response.read()
                             if b'<html' not in content and b'<body' not in content:
                                 valid.append(link)
