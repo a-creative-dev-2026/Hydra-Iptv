@@ -8,37 +8,35 @@ from proxy import SmartProxy
 from config import Config
 from channels import COUNTRY_CHANNELS, CATEGORIES, get_country_url, get_category_url
 from epg import EPG
-from scheduler import start_scheduler
 
-# ============================================================
-# تهيئة التطبيق
-# ============================================================
+# ✅ استيراد scheduler مع التعامل مع الخطأ
+try:
+    from scheduler import start_scheduler
+except ImportError:
+    def start_scheduler():
+        logging.warning("⚠️ scheduler.py غير موجود، تم تعطيل المجدول")
+        return None
 
 app = Flask(__name__)
 CORS(app)
 
-# Rate Limiting
 limiter = Limiter(
     app=app,
     key_func=get_remote_address,
     default_limits=["200 per day", "50 per hour"]
 )
 
-# التسجيل
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# تهيئة البروكسي
 proxy = SmartProxy()
-
-# تهيئة EPG (دليل البرامج)
 epg = EPG()
 
-# بدء المجدول للتحقق الدوري من الروابط
+# بدء المجدول (إذا كان متوفراً)
 scheduler = start_scheduler()
 
 # ============================================================
-# المسارات الأساسية
+# المسارات (نفسها كما في السابق، مع إضافة /stats)
 # ============================================================
 
 @app.route('/')
@@ -78,10 +76,6 @@ def index():
         }
     })
 
-# ============================================================
-# البث المباشر
-# ============================================================
-
 @app.route('/channel/<channel_name>')
 @limiter.limit("10 per minute")
 def stream_channel(channel_name):
@@ -90,10 +84,6 @@ def stream_channel(channel_name):
     if stream:
         return stream
     return jsonify({'error': f'لم يتم العثور على {channel_name}'}), 404
-
-# ============================================================
-# البحث
-# ============================================================
 
 @app.route('/search/<channel_name>')
 @limiter.limit("5 per 30 seconds")
@@ -110,10 +100,6 @@ def search_channel(channel_name):
         })
     return jsonify({'found': False, 'channel': channel_name}), 404
 
-# ============================================================
-# قوائم التشغيل (Playlists)
-# ============================================================
-
 @app.route('/playlist/country/<country_code>')
 @limiter.limit("20 per minute")
 def get_country_playlist(country_code):
@@ -124,11 +110,7 @@ def get_country_playlist(country_code):
         import requests as req
         response = req.get(url, timeout=15)
         if response.status_code == 200:
-            return Response(
-                response.text,
-                status=200,
-                content_type='application/vnd.apple.mpegurl'
-            )
+            return Response(response.text, status=200, content_type='application/vnd.apple.mpegurl')
     except Exception as e:
         logger.error(f"❌ خطأ في جلب القائمة: {e}")
         return jsonify({'error': str(e)}), 500
@@ -144,11 +126,7 @@ def get_category_playlist(category):
         import requests as req
         response = req.get(url, timeout=15)
         if response.status_code == 200:
-            return Response(
-                response.text,
-                status=200,
-                content_type='application/vnd.apple.mpegurl'
-            )
+            return Response(response.text, status=200, content_type='application/vnd.apple.mpegurl')
     except Exception as e:
         logger.error(f"❌ خطأ في جلب القائمة: {e}")
         return jsonify({'error': str(e)}), 500
@@ -163,14 +141,9 @@ def get_local_playlist():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# ============================================================
-# EPG (دليل البرامج)
-# ============================================================
-
 @app.route('/epg/<channel_name>')
 @limiter.limit("10 per minute")
 def get_epg(channel_name):
-    """جلب دليل البرامج لقناة معينة"""
     country_code = request.args.get('country')
     result = epg.get_simple_epg(channel_name, country_code)
     return jsonify(result)
@@ -178,38 +151,24 @@ def get_epg(channel_name):
 @app.route('/epg/country/<country_code>')
 @limiter.limit("5 per minute")
 def get_country_epg(country_code):
-    """جلب دليل البرامج لدولة كاملة (ملف XML)"""
     try:
         url = f"https://iptv-org.github.io/epg/guides/{country_code}.xml"
         import requests as req
         response = req.get(url, timeout=15)
         if response.status_code == 200:
-            return Response(
-                response.text,
-                status=200,
-                content_type='application/xml'
-            )
+            return Response(response.text, status=200, content_type='application/xml')
     except Exception as e:
         logger.error(f"❌ خطأ في جلب EPG: {e}")
         return jsonify({'error': str(e)}), 500
     return jsonify({'error': 'لم يتم العثور على الدليل'}), 404
 
-# ============================================================
-# إحصائيات ومراقبة
-# ============================================================
-
 @app.route('/stats')
 def get_stats():
-    """إحصائيات الكاش وحالة السيرفر"""
     stats = proxy.get_cache_stats()
     stats['total_countries'] = len(COUNTRY_CHANNELS)
     stats['total_categories'] = len(CATEGORIES)
     stats['status'] = 'running'
     return jsonify(stats)
-
-# ============================================================
-# تشغيل التطبيق
-# ============================================================
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
