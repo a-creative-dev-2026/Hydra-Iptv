@@ -1,4 +1,4 @@
-import os  # ✅ ضروري لقراءة متغير PORT
+import os
 from flask import Flask, request, jsonify, Response, redirect
 from flask_cors import CORS
 from flask_limiter import Limiter
@@ -12,7 +12,6 @@ from channels import COUNTRY_CHANNELS, CATEGORIES, get_country_url, get_category
 app = Flask(__name__)
 CORS(app)
 
-# إعداد Rate Limiting (تخزين مؤقت في الذاكرة، مناسب للتجربة)
 limiter = Limiter(
     app=app,
     key_func=get_remote_address,
@@ -33,12 +32,14 @@ def index():
     return jsonify({
         'name': 'Hydra IPTV Server',
         'version': '3.0.0',
-        'description': 'خادم IPTV سريع بدون تقطيع مع كاش دائم',
+        'description': 'خادم IPTV مع بحث شامل متعدد المصادر',
         'features': [
             'بث مباشر لأكثر من 13,971 قناة مسبقة',
             'دعم 126 دولة حول العالم',
-            '15 تصنيف مختلف (رياضة، أخبار، أفلام...)',
-            'بحث تلقائي عن الروابط المفقودة',
+            '15 تصنيف مختلف',
+            'بحث متقدم في 8 مصادر مختلفة',
+            'البحث في قنوات تليجرام (IPTV442WEB)',
+            'البحث في محركات البحث',
             'بروكسي ذكي مع تجاوز الأعطال',
             'كاش دائم (JSON)',
             'نظام حماية من الطلبات المتكررة'
@@ -46,7 +47,8 @@ def index():
         'endpoints': {
             'GET /': 'معلومات الخدمة',
             'GET /channel/<name>': 'بث قناة مباشرة',
-            'GET /search/<name>': 'البحث عن قناة',
+            'GET /search/<name>': 'بحث سريع',
+            'GET /advanced_search/<name>': 'بحث شامل متقدم',
             'GET /playlist/country/<code>': 'قائمة قنوات الدولة',
             'GET /playlist/category/<category>': 'قائمة قنوات التصنيف',
             'GET /countries/all': 'جميع دول العالم',
@@ -56,6 +58,7 @@ def index():
         'examples': {
             'channel': '/channel/Al%20Jazeera',
             'search': '/search/Al%20Jazeera',
+            'advanced_search': '/advanced_search/beIN%20Sports',
             'playlist_country': '/playlist/country/tn',
             'playlist_category': '/playlist/category/sports',
             'countries': '/countries/all',
@@ -79,7 +82,7 @@ def stream_channel(channel_name):
 @app.route('/search/<channel_name>')
 @limiter.limit("5 per 30 seconds")
 def search_channel(channel_name):
-    logger.info(f"🔍 طلب بحث: {channel_name}")
+    logger.info(f"🔍 طلب بحث سريع: {channel_name}")
     links = proxy.searcher.search_channel(channel_name)
     if links:
         proxy.cache.set(channel_name, links)
@@ -95,6 +98,30 @@ def search_channel(channel_name):
         'message': 'لم يتم العثور على روابط'
     }), 404, {'Content-Type': 'application/json; charset=utf-8'}
 
+@app.route('/advanced_search/<channel_name>')
+@limiter.limit("3 per minute")
+def advanced_search(channel_name):
+    """بحث شامل في جميع المصادر (يستغرق وقتاً أطول)"""
+    logger.info(f"🔍 طلب بحث متقدم: {channel_name}")
+    
+    links = proxy.searcher.search_channel(channel_name)
+    
+    if links:
+        proxy.cache.set(f"advanced_{channel_name}", links)
+        return jsonify({
+            'found': True,
+            'channel': channel_name,
+            'links': links,
+            'count': len(links),
+            'sources': ['iptv-org', 'free-tv', 'github', 'world-iptv', 'iptv-hub', 'telegram', 'web-engines', 'known-sites']
+        }), 200, {'Content-Type': 'application/json; charset=utf-8'}
+    
+    return jsonify({
+        'found': False,
+        'channel': channel_name,
+        'message': 'لم يتم العثور على روابط في أي مصدر'
+    }), 404, {'Content-Type': 'application/json; charset=utf-8'}
+
 @app.route('/playlist/country/<country_code>')
 @limiter.limit("20 per minute")
 def get_country_playlist(country_code):
@@ -104,7 +131,6 @@ def get_country_playlist(country_code):
     try:
         response = requests.get(url, timeout=15)
         if response.status_code == 200:
-            # دمج مع القائمة المحلية
             local_content = load_local_playlist()
             combined = merge_playlists(response.text, local_content)
             return Response(
@@ -181,7 +207,6 @@ def list_all_channels():
 # ============================================================
 
 def load_local_playlist():
-    """تحميل القائمة المحلية من ملف playlist.m3u8"""
     try:
         with open('playlist.m3u8', 'r', encoding='utf-8') as f:
             return f.read()
@@ -190,7 +215,6 @@ def load_local_playlist():
         return "#EXTM3U\n"
 
 def merge_playlists(iptv_org, local):
-    """دمج قائمتين مع إزالة التكرار البسيط"""
     return iptv_org + '\n' + local
 
 # ============================================================
@@ -198,7 +222,6 @@ def merge_playlists(iptv_org, local):
 # ============================================================
 
 if __name__ == '__main__':
-    # استخدام PORT من البيئة (Render يعينها تلقائياً)
     port = int(os.environ.get('PORT', 10000))
     print("🐍 Hydra IPTV Server v3.0")
     print("=" * 60)
