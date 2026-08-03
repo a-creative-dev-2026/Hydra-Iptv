@@ -49,7 +49,7 @@ def index():
             'countries': '/countries/all',
             'categories': '/categories/all'
         }
-    })
+    }), 200, {'Content-Type': 'application/json; charset=utf-8'}
 
 @app.route('/channel/<channel_name>')
 def stream_channel(channel_name):
@@ -65,7 +65,7 @@ def stream_channel(channel_name):
         'error': f'لم يتم العثور على {channel_name}',
         'message': 'جاري البحث عن روابط جديدة...',
         'suggestion': f'استخدم /search/{channel_name} للبحث'
-    }), 404
+    }), 404, {'Content-Type': 'application/json; charset=utf-8'}
 
 @app.route('/search/<channel_name>')
 def search_channel(channel_name):
@@ -81,20 +81,20 @@ def search_channel(channel_name):
             'channel': channel_name,
             'links': links,
             'count': len(links)
-        })
+        }), 200, {'Content-Type': 'application/json; charset=utf-8'}
     
     return jsonify({
         'found': False,
         'channel': channel_name,
         'message': 'لم يتم العثور على روابط'
-    })
+    }), 404, {'Content-Type': 'application/json; charset=utf-8'}
 
 @app.route('/playlist/country/<country_code>')
 def get_country_playlist(country_code):
     """جلب قائمة قنوات دولة معينة"""
     url = get_country_url(country_code)
     if not url:
-        return jsonify({'error': 'دولة غير مدعومة'}), 404
+        return jsonify({'error': 'دولة غير مدعومة'}), 404, {'Content-Type': 'application/json; charset=utf-8'}
     
     try:
         response = requests.get(url, timeout=15)
@@ -102,21 +102,21 @@ def get_country_playlist(country_code):
             return Response(
                 response.text,
                 status=200,
-                content_type='application/vnd.apple.mpegurl',
+                content_type='application/vnd.apple.mpegurl; charset=utf-8',
                 headers={'Access-Control-Allow-Origin': '*'}
             )
     except Exception as e:
         logger.error(f"❌ خطأ في جلب القائمة: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': str(e)}), 500, {'Content-Type': 'application/json; charset=utf-8'}
     
-    return jsonify({'error': 'فشل في جلب القائمة'}), 500
+    return jsonify({'error': 'فشل في جلب القائمة'}), 500, {'Content-Type': 'application/json; charset=utf-8'}
 
 @app.route('/playlist/category/<category>')
 def get_category_playlist(category):
     """جلب قائمة قنوات تصنيف معين"""
     url = get_category_url(category)
     if not url:
-        return jsonify({'error': 'تصنيف غير مدعوم'}), 404
+        return jsonify({'error': 'تصنيف غير مدعوم'}), 404, {'Content-Type': 'application/json; charset=utf-8'}
     
     try:
         response = requests.get(url, timeout=15)
@@ -124,14 +124,14 @@ def get_category_playlist(category):
             return Response(
                 response.text,
                 status=200,
-                content_type='application/vnd.apple.mpegurl',
+                content_type='application/vnd.apple.mpegurl; charset=utf-8',
                 headers={'Access-Control-Allow-Origin': '*'}
             )
     except Exception as e:
         logger.error(f"❌ خطأ في جلب القائمة: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': str(e)}), 500, {'Content-Type': 'application/json; charset=utf-8'}
     
-    return jsonify({'error': 'فشل في جلب القائمة'}), 500
+    return jsonify({'error': 'فشل في جلب القائمة'}), 500, {'Content-Type': 'application/json; charset=utf-8'}
 
 @app.route('/countries/all')
 def list_all_countries():
@@ -139,7 +139,7 @@ def list_all_countries():
     return jsonify({
         'total': len(COUNTRY_CHANNELS),
         'countries': COUNTRY_CHANNELS
-    })
+    }), 200, {'Content-Type': 'application/json; charset=utf-8'}
 
 @app.route('/categories/all')
 def list_all_categories():
@@ -147,7 +147,7 @@ def list_all_categories():
     return jsonify({
         'total': len(CATEGORIES),
         'categories': CATEGORIES
-    })
+    }), 200, {'Content-Type': 'application/json; charset=utf-8'}
 
 @app.route('/sports')
 def list_sports_channels():
@@ -155,7 +155,7 @@ def list_sports_channels():
     return jsonify({
         'channels': proxy.cache.cache,
         'count': len(proxy.cache.cache)
-    })
+    }), 200, {'Content-Type': 'application/json; charset=utf-8'}
 
 @app.route('/all_channels')
 def list_all_channels():
@@ -170,7 +170,7 @@ def list_all_channels():
     
     all_channels['categories'] = CATEGORIES
     
-    return jsonify(all_channels)
+    return jsonify(all_channels), 200, {'Content-Type': 'application/json; charset=utf-8'}
 
 if __name__ == '__main__':
     print("🐍 Hydra IPTV Server v2.0")
