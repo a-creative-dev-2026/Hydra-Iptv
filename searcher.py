@@ -20,7 +20,7 @@ class ChannelSearcher:
             'Connection': 'keep-alive',
         })
         
-        # ✅ قائمة المصادر (مخفضة للسرعة)
+        # ✅ قائمة المصادر (مرتبة حسب الأهمية)
         self.sources = [
             self._search_iptv_org,
             self._search_free_tv,
@@ -31,19 +31,20 @@ class ChannelSearcher:
         ]
     
     def search_channel(self, channel_name, country=None):
-        """البحث الشامل عن قناة مع توسيع الكلمات المفتاحية"""
+        """البحث الشامل عن قناة مع تحسين الدقة"""
         logger.info(f"🔍 جاري البحث الشامل عن: {channel_name}")
         all_links = []
         
-        # ✅ استخراج الكلمات المفتاحية
-        keywords = self._extract_keywords(channel_name)
-        logger.info(f"🔑 الكلمات المفتاحية المستخرجة: {keywords}")
+        # ✅ استخراج الكلمات المفتاحية الرئيسية
+        primary_keyword = channel_name.strip()
+        keywords = self._extract_keywords(primary_keyword)
+        logger.info(f"🔑 الكلمات المفتاحية: {keywords}")
         
-        # ✅ البحث باستخدام ThreadPoolExecutor مع عدد أقل من العمال
-        with ThreadPoolExecutor(max_workers=3) as executor:
+        # ✅ البحث في جميع المصادر
+        with ThreadPoolExecutor(max_workers=4) as executor:
             futures = {
                 executor.submit(source_func, keywords): source_func.__name__
-                for source_func in self.sources[:4]
+                for source_func in self.sources[:5]
             }
             for future in as_completed(futures):
                 try:
@@ -54,24 +55,87 @@ class ChannelSearcher:
                 except Exception as e:
                     logger.warning(f"⚠️ خطأ في المصدر {futures[future]}: {e}")
         
-        # ✅ تصفية النتائج حسب الصلة
-        filtered_links = self._filter_by_relevance(all_links, channel_name)
-        unique_links = list(set(filtered_links))
+        # ✅ تصفية النتائج بدقة عالية
+        filtered_links = self._filter_by_relevance(all_links, primary_keyword)
+        
+        # ✅ إزالة التكرار
+        unique_links = list(dict.fromkeys(filtered_links))  # يحافظ على الترتيب
+        
+        # ✅ التحقق من صحة الروابط (اختبار سريع)
         valid_links = self._validate_links(unique_links)
         
         logger.info(f"✅ تم العثور على {len(valid_links)} رابط صالح لـ {channel_name}")
         return valid_links
     
     # ============================================================
-    # دالة استخراج الكلمات المفتاحية مع مرادفاتها
+    # 🎯 دالة التصفية الذكية (القلب النابض للدقة)
+    # ============================================================
+    
+    def _filter_by_relevance(self, links, query):
+        """ترتيب النتائج حسب الدقة والتطابق مع الاستعلام"""
+        if not links:
+            return links
+        
+        # ✅ تحضير الاستعلام للبحث
+        query_lower = query.lower().strip()
+        query_words = set(query_lower.split())
+        
+        # ✅ قائمة الكلمات التي تشير إلى نتائج غير مرغوب فيها
+        unwanted_keywords = ['radio', 'cnbc', 'indonesia', 'podcast', 'audio']
+        
+        scored_links = []
+        for link in links:
+            score = 0
+            link_lower = link.lower()
+            
+            # ✅ 1. نقاط للتطابق التام (الاسم الكامل)
+            if query_lower in link_lower:
+                score += 50
+            # ✅ 2. نقاط للتطابق مع كل كلمة من الاستعلام
+            for word in query_words:
+                if word in link_lower:
+                    score += 10
+            
+            # ✅ 3. نقاط إضافية للمصادر الموثوقة
+            trusted_domains = ['amagi.tv', 'iptv-org', 'github.io', 'streamlock.net', 'sofast.tv']
+            for domain in trusted_domains:
+                if domain in link_lower:
+                    score += 20
+            
+            # ✅ 4. نقاط للروابط الآمنة (HTTPS)
+            if link.startswith('https://'):
+                score += 5
+            
+            # ✅ 5. خصم النقاط للروابط غير المرغوب فيها
+            for unwanted in unwanted_keywords:
+                if unwanted in link_lower:
+                    score -= 30  # خصم كبير لتقليل ظهورها
+            
+            # ✅ 6. خصم النقاط للروابط التي تحوي "m3u8" بشكل صحيح (نعطيها أفضلية)
+            if '.m3u8' in link_lower:
+                score += 3
+            
+            scored_links.append((score, link))
+        
+        # ✅ ترتيب تنازلي حسب النقاط
+        scored_links.sort(reverse=True, key=lambda x: x[0])
+        
+        # ✅ إرجاع الروابط ذات النقاط الموجبة فقط (أو كلها إذا كانت النقاط صفراً)
+        filtered = [link for score, link in scored_links if score > 0]
+        if not filtered:
+            # إذا لم تكن هناك روابط ذات نقاط موجبة، نرجع أول 5 روابط
+            filtered = [link for _, link in scored_links[:5]]
+        
+        return filtered
+    
+    # ============================================================
+    # 🔑 استخراج الكلمات المفتاحية مع مرادفات
     # ============================================================
     
     def _extract_keywords(self, channel_name):
-        """استخراج الكلمات المفتاحية من اسم القناة مع مرادفاتها"""
+        """استخراج الكلمات المفتاحية مع مرادفاتها"""
         keywords = []
         original = channel_name.lower().strip()
-        
-        # ✅ الكلمة الأساسية
         keywords.append(original)
         
         # ✅ إزالة الأرقام والرموز للحصول على الكلمة الجذرية
@@ -88,17 +152,7 @@ class ChannelSearcher:
         # ✅ مرادفات للقنوات الشهيرة
         synonyms = {
             'bein': ['bein', 'be in', 'bein sports', 'beIN', 'beIN Sports'],
-            'sports': ['sports', 'sport', 'sp'],
-            'extra': ['extra', 'xtra'],
-            'max': ['max', 'maximum'],
-            'hd': ['hd', 'high definition'],
-            'arabic': ['arabic', 'arab', 'ar'],
-            'english': ['english', 'eng', 'en'],
-            'french': ['french', 'fra', 'fr'],
-            '1': ['1', 'one', '01'],
-            '2': ['2', 'two', '02'],
-            '3': ['3', 'three', '03'],
-            'mbc': ['mbc', 'middle east broadcasting', 'mbc 1', 'mbc 2', 'mbc 3', 'mbc 4', 'mbc action', 'mbc max', 'mbc drama', 'mbc masr', 'mbc egypt'],
+            'mbc': ['mbc', 'middle east broadcasting', 'mbc 1', 'mbc 2', 'mbc 3', 'mbc action', 'mbc max', 'mbc drama', 'mbc masr'],
             'aljazeera': ['aljazeera', 'al jazeera', 'الجزيرة'],
             'cnn': ['cnn', 'cable news network'],
             'bbc': ['bbc', 'british broadcasting corporation'],
@@ -118,54 +172,7 @@ class ChannelSearcher:
         return keywords
     
     # ============================================================
-    # دالة تصفية النتائج حسب الصلة
-    # ============================================================
-    
-    def _filter_by_relevance(self, links, original_query):
-        """ترتيب النتائج حسب الصلة بالقناة المطلوبة"""
-        if not links:
-            return links
-        
-        # ✅ قائمة القنوات المطلوبة (جميع الإصدارات)
-        target_variants = [
-            # beIN Sports
-            'beIN Sports 1', 'beIN Sports 2', 'beIN Sports 3',
-            'beIN Sports Extra', 'beIN Sports Max', 'beIN Sports Max 1',
-            'beIN Sports HD', 'beIN Sports Arabic', 'beIN Sports English',
-            'beIN Sports French', 'beIN Sports 4K', 'beIN Sports News',
-            # MBC
-            'MBC 1', 'MBC 2', 'MBC 3', 'MBC 4', 'MBC Action',
-            'MBC Max', 'MBC Drama', 'MBC Masr', 'MBC Egypt',
-            # قنوات أخرى
-            'Al Jazeera', 'CNN', 'BBC', 'Sky Sports', 'FOX Sports', 'ESPN'
-        ]
-        
-        scored_links = []
-        for link in links:
-            score = 0
-            link_lower = link.lower()
-            
-            # ✅ الروابط من Amagi (جودة عالية) تحصل على نقاط إضافية
-            if 'amagi.tv' in link_lower:
-                score += 10
-            
-            # ✅ الروابط التي تحتوي على أي من الكلمات المفتاحية
-            for variant in target_variants:
-                if variant.lower().replace(' ', '') in link_lower.replace(' ', ''):
-                    score += 5
-            
-            # ✅ الروابط الآمنة (HTTPS) تحصل على نقاط
-            if link.startswith('https://'):
-                score += 2
-            
-            scored_links.append((score, link))
-        
-        # ترتيب تنازلي حسب النقاط
-        scored_links.sort(reverse=True, key=lambda x: x[0])
-        return [link for score, link in scored_links]
-    
-    # ============================================================
-    # مصادر البحث (جميعها معدلة للبحث عن الكلمات المفتاحية)
+    # 📡 مصادر البحث (جميعها معدلة للبحث عن الكلمات المفتاحية)
     # ============================================================
     
     def _search_iptv_org(self, keywords):
@@ -252,14 +259,10 @@ class ChannelSearcher:
             logger.warning(f"⚠️ خطأ في IPTV-Hub: {e}")
         return []
     
-    # ============================================================
-    # محركات البحث
-    # ============================================================
-    
     def _search_web_engines(self, keywords):
         try:
             links = []
-            primary_keyword = keywords[0] if keywords else "beIN Sports"
+            primary_keyword = keywords[0] if keywords else "tv"
             ddg_url = f"https://html.duckduckgo.com/html/?q={primary_keyword.replace(' ', '+')}+m3u8"
             response = self.session.get(ddg_url, timeout=8)
             if response.status_code == 200:
@@ -272,17 +275,18 @@ class ChannelSearcher:
             return []
     
     # ============================================================
-    # دوال مساعدة
+    # ✅ التحقق من صحة الروابط
     # ============================================================
     
     def _validate_links(self, links):
         valid = []
-        for link in links[:8]:
+        for link in links[:10]:  # اختبر أول 10 روابط فقط للسرعة
             try:
                 response = self.session.head(link, timeout=3, allow_redirects=True)
                 if response.status_code in [200, 206, 302, 301]:
                     valid.append(link)
                     logger.info(f"✅ رابط صالح: {link[:50]}...")
-            except:
+            except Exception as e:
+                logger.warning(f"❌ رابط غير صالح: {link[:50]}... - {str(e)[:30]}")
                 continue
         return valid
