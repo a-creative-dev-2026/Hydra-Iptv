@@ -1,6 +1,6 @@
 # ============================================================
 # روابط القنوات المباشرة حسب الدولة والتصنيف
-# المصدر: iptv-org.github.io + قنوات محلية
+# المصدر: iptv-org.github.io + قنوات محلية + تليجرام
 # ============================================================
 
 COUNTRY_CHANNELS = {
@@ -31,7 +31,7 @@ COUNTRY_CHANNELS = {
     'zm': {'name': 'زامبيا', 'url': 'https://iptv-org.github.io/iptv/countries/zm.m3u'},
     'zw': {'name': 'زيمبابوي', 'url': 'https://iptv-org.github.io/iptv/countries/zw.m3u'},
     
-    # آسيا (مختصر)
+    # آسيا
     'sa': {'name': 'السعودية', 'url': 'https://iptv-org.github.io/iptv/countries/sa.m3u'},
     'ae': {'name': 'الإمارات', 'url': 'https://iptv-org.github.io/iptv/countries/ae.m3u'},
     'qa': {'name': 'قطر', 'url': 'https://iptv-org.github.io/iptv/countries/qa.m3u'},
@@ -58,7 +58,7 @@ COUNTRY_CHANNELS = {
     'th': {'name': 'تايلاند', 'url': 'https://iptv-org.github.io/iptv/countries/th.m3u'},
     'vn': {'name': 'فيتنام', 'url': 'https://iptv-org.github.io/iptv/countries/vn.m3u'},
     
-    # أوروبا (مختصر)
+    # أوروبا
     'gb': {'name': 'المملكة المتحدة', 'url': 'https://iptv-org.github.io/iptv/countries/gb.m3u'},
     'fr': {'name': 'فرنسا', 'url': 'https://iptv-org.github.io/iptv/countries/fr.m3u'},
     'de': {'name': 'ألمانيا', 'url': 'https://iptv-org.github.io/iptv/countries/de.m3u'},
