@@ -2,7 +2,7 @@ import requests
 from flask import Response, stream_with_context, redirect
 from cache import Cache
 from searcher import ChannelSearcher
-from channels import COUNTRY_CHANNELS  # ✅ استيراد الدول فقط
+from channels import COUNTRY_CHANNELS
 import logging
 import re
 import time
@@ -24,9 +24,9 @@ class SmartProxy:
         self._load_predefined_links()
     
     def _load_predefined_links(self):
+        """تحميل قنوات الدول فقط"""
         logger.info("📥 جاري تحميل الروابط المسبقة...")
         
-        # ✅ تحميل قنوات الدول فقط
         for country_code, data in COUNTRY_CHANNELS.items():
             channel_name = data['name']
             url = data['url']
@@ -40,7 +40,6 @@ class SmartProxy:
     def get_stream(self, channel_name):
         logger.info(f"📺 طلب بث: {channel_name}")
         
-        # ✅ البحث في الكاش فقط
         cached_links = self.cache.get(channel_name)
         if cached_links:
             logger.info(f"📦 تم العثور على {len(cached_links)} رابط في الكاش")
@@ -51,7 +50,6 @@ class SmartProxy:
                 else:
                     logger.info(f"❌ رابط لا يعمل: {link[:50]}...")
         
-        # ✅ البحث عن روابط جديدة
         logger.info(f"🔍 جاري البحث عن {channel_name}...")
         links = self.searcher.search_channel(channel_name)
         
@@ -93,3 +91,10 @@ class SmartProxy:
         except Exception as e:
             logger.error(f"❌ خطأ في البروكسي: {e}")
             return None
+    
+    def get_cache_stats(self):
+        """إحصائيات الكاش (للاستخدام مع واجهة المراقبة)"""
+        return {
+            'total_channels': len(self.cache.cache),
+            'total_links': sum(len(v['data']) for v in self.cache.cache.values()),
+        }
