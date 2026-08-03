@@ -24,12 +24,13 @@ class SmartProxy:
         print("📥 جاري تحميل الروابط المسبقة...")
         
         # إضافة قنوات الدول
-        for country_data in COUNTRY_CHANNELS.values():
-            for channel_name, url in country_data['channels'].items():
-                links = self.cache.get(channel_name) or []
-                if url not in links:
-                    links.append(url)
-                    self.cache.set(channel_name, links)
+        for country_code, data in COUNTRY_CHANNELS.items():
+            channel_name = data['name']
+            url = data['url']
+            links = self.cache.get(channel_name) or []
+            if url not in links:
+                links.append(url)
+                self.cache.set(channel_name, links)
         
         # إضافة القنوات الرياضية
         for channel_name, url in SPORTS_CHANNELS.items():
@@ -91,3 +92,16 @@ class SmartProxy:
         except Exception as e:
             print(f"❌ خطأ في البروكسي: {e}")
             return None
+    
+    def add_channel(self, channel_name, url):
+        """إضافة قناة يدوياً"""
+        links = self.cache.get(channel_name) or []
+        if url not in links:
+            links.append(url)
+            self.cache.set(channel_name, links)
+            return True
+        return False
+    
+    def get_channels_by_country(self, country_code):
+        """الحصول على قنوات دولة معينة"""
+        return COUNTRY_CHANNELS.get(country_code, {}).get('name')
