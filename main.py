@@ -49,21 +49,17 @@ async def index():
 
 @app.get("/search/{query}", response_model=SearchResult)
 async def search(query: str):
-    logger.info(f"Searching for: {query}")
+    logger.info(f"Deep hunting for: {query}")
     
-    # Check cache
     cached = await cache.get(query)
     if cached:
-        logger.info(f"Cache hit for: {query}")
         return cached
 
-    results = await hunter.get_valid_links(query)
+    # Use deep_hunt for multi-quality and more results
+    results = await hunter.deep_hunt(query)
     
     if not results:
-        return JSONResponse(
-            status_code=404,
-            content={"found": False, "query": query, "count": 0, "links": []}
-        )
+        return JSONResponse(status_code=404, content={"found": False, "query": query, "count": 0, "links": []})
 
     response_data = {
         "query": query,
@@ -78,16 +74,15 @@ async def search(query: str):
 
 @app.get("/channel/{name}")
 async def get_channel(name: str):
-    logger.info(f"Streaming channel: {name}")
+    logger.info(f"Monster streaming: {name}")
     
-    # Try to find the channel
-    results = await hunter.get_valid_links(name)
+    results = await hunter.deep_hunt(name)
     if not results:
         raise HTTPException(status_code=404, detail="Channel not found")
     
-    # Use the best link (first one)
-    best_link = results[0]['url']
-    return await proxy.get_stream_response(best_link)
+    # Pass all links for failover
+    links = [r['url'] for r in results]
+    return await proxy.get_stream_response(links)
 
 @app.get("/playlist/country/{code}")
 async def get_country_playlist(code: str):

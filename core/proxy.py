@@ -27,20 +27,32 @@ class StreamProxy:
             except Exception as e:
                 logger.error(f"Proxy Error: {e}")
 
-    async def get_stream_response(self, url: str):
-        # We can try to detect if it's an M3U8 or a direct TS stream
-        if ".m3u8" in url.lower():
-            # For M3U8, redirecting is often better for the player to handle segments
-            # but we can also proxy it if we want to hide the source
-            return Response(status_code=302, headers={"Location": url})
+    async def get_stream_response(self, urls: list):
+        """The Monster Proxy: Tries multiple URLs if one fails"""
+        if not urls:
+            return Response(status_code=404, content="No valid links found")
+
+        # Try to find the first working URL
+        for url in urls:
+            try:
+                # Quick check if link is alive
+                async with aiohttp.ClientSession() as session:
+                    async with session.head(url, timeout=3, allow_redirects=True) as resp:
+                        if resp.status in [200, 206]:
+                            if ".m3u8" in url.lower():
+                                return Response(status_code=302, headers={"Location": url})
+                            
+                            return StreamingResponse(
+                                self.stream_generator(url),
+                                media_type="video/mp2t",
+                                headers={
+                                    "Access-Control-Allow-Origin": "*",
+                                    "Cache-Control": "no-cache",
+                                    "Connection": "keep-alive"
+                                }
+                            )
+            except:
+                continue
         
-        # For direct TS/MP4 streams, proxying helps with stability and CORS
-        return StreamingResponse(
-            self.stream_generator(url),
-            media_type="video/mp2t",
-            headers={
-                "Access-Control-Allow-Origin": "*",
-                "Cache-Control": "no-cache",
-                "Connection": "keep-alive"
-            }
-        )
+        # Fallback to the first one even if HEAD failed
+        return Response(status_code=302, headers={"Location": urls[0]})

@@ -87,21 +87,29 @@
                     data.channels.forEach(channel => {
                         const card = document.createElement('div');
                         card.className = 'glass p-6 rounded-2xl hover:border-blue-500/50 transition-all group';
+                        const qualityColor = channel.quality === 'FHD' ? 'text-red-500' : (channel.quality === 'HD' ? 'text-yellow-500' : 'text-blue-500');
                         card.innerHTML = `
                             <div class="flex justify-between items-start mb-4">
                                 <div class="w-12 h-12 bg-slate-800 rounded-lg flex items-center justify-center">
-                                    <i class="fas fa-tv text-blue-400 text-xl"></i>
+                                    <i class="fas fa-tv ${qualityColor} text-xl"></i>
                                 </div>
-                                <span class="bg-green-500/10 text-green-500 text-xs font-bold px-3 py-1 rounded-full">نشط</span>
+                                <div class="flex flex-col items-end">
+                                    <span class="bg-green-500/10 text-green-500 text-xs font-bold px-3 py-1 rounded-full mb-1">نشط</span>
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-700 text-slate-300 uppercase">${channel.quality}</span>
+                                </div>
                             </div>
-                            <h3 class="text-xl font-bold mb-2 truncate">${channel.name}</h3>
-                            <p class="text-slate-500 text-sm mb-6 truncate">${channel.url}</p>
+                            <h3 class="text-xl font-bold mb-1 truncate">${channel.name}</h3>
+                            <div class="flex items-center gap-2 mb-4">
+                                <span class="text-xs text-slate-500">جودة: <b class="${qualityColor}">${channel.quality}</b></span>
+                                <span class="text-xs text-slate-500">|</span>
+                                <span class="text-xs text-slate-500">تجاوز الأعطال: <b class="text-green-500">مفعل</b></span>
+                            </div>
                             <div class="flex gap-2">
-                                <a href="/channel/${encodeURIComponent(channel.name)}" target="_blank" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl text-center font-bold transition-all">
-                                    <i class="fas fa-play ml-2"></i> تشغيل
+                                <a href="/channel/${encodeURIComponent(channel.name)}" target="_blank" class="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white py-3 rounded-xl text-center font-bold transition-all shadow-lg shadow-blue-500/20">
+                                    <i class="fas fa-play-circle ml-2"></i> تشغيل الوحش
                                 </a>
-                                <button onclick="copyToClipboard('${channel.url}')" class="w-12 bg-slate-800 hover:bg-slate-700 rounded-xl transition-all">
-                                    <i class="fas fa-copy"></i>
+                                <button onclick="copyToClipboard('${channel.url}')" class="w-12 bg-slate-800 hover:bg-slate-700 rounded-xl transition-all text-slate-400">
+                                    <i class="fas fa-link"></i>
                                 </button>
                             </div>
                         `;

@@ -17,6 +17,9 @@ class IPTVHunter:
             "https://raw.githubusercontent.com/iptv-hub/iptv-hub/main/playlist.m3u",
             "https://iptv-org.github.io/iptv/index.nsfw.m3u",
             "https://raw.githubusercontent.com/ismailozgul/iptv/main/playlist.m3u",
+            "https://raw.githubusercontent.com/Tukitv/Tukitv/main/Tukitv.m3u",
+            "https://raw.githubusercontent.com/pizofre/iptv/master/playlist.m3u8",
+            "https://raw.githubusercontent.com/Yebon/IPTV/main/playlist.m3u",
         ]
         # Local playlists directory
         self.local_playlists_dir = "data/playlists"
@@ -37,24 +40,47 @@ class IPTVHunter:
 
     def parse_m3u(self, content: str, query: str) -> List[dict]:
         results = []
-        # Pattern to match #EXTINF and the URL
-        # #EXTINF:-1 tvg-id="ID" tvg-logo="LOGO" group-title="GROUP",CHANNEL NAME\nURL
         pattern = r'#EXTINF:.*?,(.*?)\n(https?://[^\s]+)'
         matches = re.findall(pattern, content, re.IGNORECASE | re.MULTILINE)
         
-        query_clean = query.lower().replace(" ", "")
+        query_clean = query.lower().strip()
         
         for name, url in matches:
             name_clean = name.strip()
-            # Simple fuzzy matching or substring
-            ratio = fuzz.partial_ratio(query_clean, name_clean.lower().replace(" ", ""))
-            if ratio > 80 or query_clean in name_clean.lower().replace(" ", ""):
+            name_lower = name_clean.lower()
+            
+            # Deep matching logic
+            ratio = fuzz.token_set_ratio(query_clean, name_lower)
+            if ratio > 85 or query_clean in name_lower:
+                # Detect quality
+                quality = "SD"
+                if any(q in name_lower for q in ["fhd", "1080p", "4k"]): quality = "FHD"
+                elif any(q in name_lower for q in ["hd", "720p"]): quality = "HD"
+                
                 results.append({
                     "name": name_clean,
                     "url": url.strip(),
-                    "score": ratio
+                    "quality": quality,
+                    "score": ratio + (5 if quality == "FHD" else 2 if quality == "HD" else 0)
                 })
         return results
+
+    async def deep_hunt(self, query: str) -> List[dict]:
+        """The 'Monster' search - searches multiple sources and returns ranked multi-quality links"""
+        all_results = await self.hunt(query)
+        
+        # Group by quality and take top results for each
+        qualities = {"FHD": [], "HD": [], "SD": []}
+        for res in all_results:
+            qualities[res.get("quality", "SD")].append(res)
+        
+        final_monster_list = []
+        # Take at least 5 links if possible, prioritizing quality
+        for q in ["FHD", "HD", "SD"]:
+            sorted_q = sorted(qualities[q], key=lambda x: x['score'], reverse=True)
+            final_monster_list.extend(sorted_q[:3]) # Take top 3 of each quality
+            
+        return sorted(final_monster_list, key=lambda x: x['score'], reverse=True)[:10]
 
     async def hunt(self, query: str) -> List[dict]:
         all_results = []
