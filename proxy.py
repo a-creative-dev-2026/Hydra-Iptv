@@ -4,6 +4,7 @@ from cache import Cache
 from searcher import ChannelSearcher
 from channels import COUNTRY_CHANNELS, SPORTS_CHANNELS
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +26,7 @@ class SmartProxy:
     def _load_predefined_links(self):
         logger.info("📥 جاري تحميل الروابط المسبقة...")
         
+        # 1. تحميل القنوات المشهورة
         try:
             from channels import POPULAR_CHANNELS
             for channel_name, url in POPULAR_CHANNELS.items():
@@ -38,6 +40,7 @@ class SmartProxy:
         except Exception as e:
             logger.warning(f"⚠️ خطأ في تحميل القنوات المشهورة: {e}")
         
+        # 2. تحميل قنوات الدول
         for country_code, data in COUNTRY_CHANNELS.items():
             channel_name = data['name']
             url = data['url']
@@ -46,15 +49,55 @@ class SmartProxy:
                 links.append(url)
                 self.cache.set(channel_name, links)
         
+        # 3. تحميل القنوات الرياضية
         for channel_name, url in SPORTS_CHANNELS.items():
             links = self.cache.get(channel_name) or []
             if url not in links:
                 links.append(url)
                 self.cache.set(channel_name, links)
         
+        # ✅ 4. تحميل القنوات المحلية من playlist.m3u8 (الميزة المفقودة)
+        self._load_local_playlist()
+        
         logger.info(f"✅ تم تحميل {len(self.cache.cache)} قناة مسبقة في الكاش")
     
+    def _load_local_playlist(self):
+        """تحميل القنوات من ملف playlist.m3u8 وجعلها قابلة للبحث"""
+        try:
+            with open('playlist.m3u8', 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            # استخراج القنوات من ملف M3U
+            lines = content.splitlines()
+            channels = []
+            current_name = None
+            current_url = None
+            
+            for line in lines:
+                if line.startswith('#EXTINF'):
+                    # استخراج اسم القناة
+                    match = re.search(r',(.+)$', line)
+                    if match:
+                        current_name = match.group(1).strip()
+                elif line.startswith('http') and current_name:
+                    current_url = line.strip()
+                    # إضافة القناة إلى الكاش
+                    if current_name and current_url:
+                        links = self.cache.get(current_name) or []
+                        if current_url not in links:
+                            links.append(current_url)
+                            self.cache.set(current_name, links)
+                        # إعادة تعيين
+                        current_name = None
+                        current_url = None
+            
+            logger.info(f"✅ تم تحميل {len(channels)} قناة محلية من playlist.m3u8")
+        except Exception as e:
+            logger.warning(f"⚠️ خطأ في تحميل القائمة المحلية: {e}")
+    
     def get_stream(self, channel_name):
+        """الحصول على تيار البث"""
+        # 1. البحث في الكاش (بما في ذلك القنوات المحلية)
         cached_links = self.cache.get(channel_name)
         if cached_links:
             logger.info(f"📦 تم العثور على {len(cached_links)} رابط في الكاش لـ {channel_name}")
@@ -65,6 +108,7 @@ class SmartProxy:
                 else:
                     logger.info(f"❌ رابط لا يعمل: {link[:50]}...")
         
+        # 2. البحث عن روابط جديدة
         logger.info(f"🔍 لم يتم العثور على {channel_name} في الكاش، جاري البحث العميق...")
         links = self.searcher.search_channel(channel_name)
         
