@@ -1,83 +1,145 @@
-# ============================================================
-# قنوات ثابتة موثوقة (تم اختبارها)
-# ============================================================
+import re
+import time
+import requests
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from fake_useragent import UserAgent
+from config import Config
+import logging
 
-STATIC_CHANNELS = {
-    'Al Jazeera': {
-        'url': 'https://live-hls-web-aje.getaj.net/AJE/index.m3u8',
-        'country': 'qa',
-        'category': 'news'
-    },
-    'Al Arabiya': {
-        'url': 'https://live.alarabiya.net/alarabiapublish/alarabiya.smil/playlist.m3u8',
-        'country': 'ae',
-        'category': 'news'
-    },
-    'CNN': {
-        'url': 'https://cnn-cnninternational-1-eu.rakuten.wurl.tv/63831a0c85fb46b5bf3b9fbd35a2331b.m3u8',
-        'country': 'us',
-        'category': 'news'
-    },
-    'BBC': {
-        'url': 'https://vs-hls-push-ww-live.akamaized.net/x=4/i=urn:bbc:pips:service:bbc_news_channel_hd/t=3840/v=pv14/b=5070016/main.m3u8',
-        'country': 'uk',
-        'category': 'news'
-    },
-    'Sky Sports': {
-        'url': 'https://rpn.bozztv.com/gusa/gusa-tvssportsbureau/index.m3u8',
-        'country': 'uk',
-        'category': 'sports'
-    },
-    'beIN Sports 1': {
-        'url': 'https://streams2.sofast.tv/v1/master/611d79b11b77e2f571934fd80ca1413453772ac7/e0b81a5c-6ab5-48cd-aaa9-f82de4ab5bf9/manifest.m3u8',
-        'country': 'qa',
-        'category': 'sports'
-    },
-    'beIN Sports 2': {
-        'url': 'https://5c7b683162943.streamlock.net/live/ngrp:bahrainsportstwo_all/playlist.m3u8',
-        'country': 'bh',
-        'category': 'sports'
-    },
-}
+logger = logging.getLogger(__name__)
+ua = UserAgent()
 
-# ============================================================
-# روابط الدول الأساسية
-# ============================================================
-
-COUNTRY_CHANNELS = {
-    'tn': {'name': 'تونس', 'url': 'https://iptv-org.github.io/iptv/countries/tn.m3u'},
-    'sa': {'name': 'السعودية', 'url': 'https://iptv-org.github.io/iptv/countries/sa.m3u'},
-    'eg': {'name': 'مصر', 'url': 'https://iptv-org.github.io/iptv/countries/eg.m3u'},
-    'dz': {'name': 'الجزائر', 'url': 'https://iptv-org.github.io/iptv/countries/dz.m3u'},
-    'ma': {'name': 'المغرب', 'url': 'https://iptv-org.github.io/iptv/countries/ma.m3u'},
-    'ae': {'name': 'الإمارات', 'url': 'https://iptv-org.github.io/iptv/countries/ae.m3u'},
-    'qa': {'name': 'قطر', 'url': 'https://iptv-org.github.io/iptv/countries/qa.m3u'},
-    'kw': {'name': 'الكويت', 'url': 'https://iptv-org.github.io/iptv/countries/kw.m3u'},
-    'bh': {'name': 'البحرين', 'url': 'https://iptv-org.github.io/iptv/countries/bh.m3u'},
-    'om': {'name': 'عمان', 'url': 'https://iptv-org.github.io/iptv/countries/om.m3u'},
-    'jo': {'name': 'الأردن', 'url': 'https://iptv-org.github.io/iptv/countries/jo.m3u'},
-    'lb': {'name': 'لبنان', 'url': 'https://iptv-org.github.io/iptv/countries/lb.m3u'},
-    'sy': {'name': 'سوريا', 'url': 'https://iptv-org.github.io/iptv/countries/sy.m3u'},
-    'iq': {'name': 'العراق', 'url': 'https://iptv-org.github.io/iptv/countries/iq.m3u'},
-    'ps': {'name': 'فلسطين', 'url': 'https://iptv-org.github.io/iptv/countries/ps.m3u'},
-    'ye': {'name': 'اليمن', 'url': 'https://iptv-org.github.io/iptv/countries/ye.m3u'},
-    'ly': {'name': 'ليبيا', 'url': 'https://iptv-org.github.io/iptv/countries/ly.m3u'},
-    'sd': {'name': 'السودان', 'url': 'https://iptv-org.github.io/iptv/countries/sd.m3u'},
-    'us': {'name': 'الولايات المتحدة', 'url': 'https://iptv-org.github.io/iptv/countries/us.m3u'},
-    'gb': {'name': 'بريطانيا', 'url': 'https://iptv-org.github.io/iptv/countries/gb.m3u'},
-    'fr': {'name': 'فرنسا', 'url': 'https://iptv-org.github.io/iptv/countries/fr.m3u'},
-    'de': {'name': 'ألمانيا', 'url': 'https://iptv-org.github.io/iptv/countries/de.m3u'},
-    'it': {'name': 'إيطاليا', 'url': 'https://iptv-org.github.io/iptv/countries/it.m3u'},
-    'es': {'name': 'إسبانيا', 'url': 'https://iptv-org.github.io/iptv/countries/es.m3u'},
-    'tr': {'name': 'تركيا', 'url': 'https://iptv-org.github.io/iptv/countries/tr.m3u'},
-}
-
-# ============================================================
-# دوال مساعدة
-# ============================================================
-
-def get_static_channel(channel_name):
-    return STATIC_CHANNELS.get(channel_name, {}).get('url')
-
-def get_country_url(country_code):
-    return COUNTRY_CHANNELS.get(country_code, {}).get('url')
+class ChannelSearcher:
+    def __init__(self):
+        self.session = requests.Session()
+        self.session.headers.update({
+            'User-Agent': ua.random,
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9,ar;q=0.8',
+        })
+    
+    def search_channel(self, channel_name, country=None):
+        """البحث عن قناة في مصادر متعددة"""
+        logger.info(f"🔍 جاري البحث عن: {channel_name}")
+        all_links = []
+        keywords = self._extract_keywords(channel_name)
+        
+        # 1. البحث في مصادر iptv-org
+        links = self._search_iptv_org(keywords)
+        if links:
+            all_links.extend(links)
+            logger.info(f"✅ تم العثور على {len(links)} رابط من iptv-org")
+        
+        # 2. البحث في GitHub
+        links = self._search_github(keywords)
+        if links:
+            all_links.extend(links)
+            logger.info(f"✅ تم العثور على {len(links)} رابط من GitHub")
+        
+        # 3. البحث في World IPTV
+        links = self._search_world_iptv(keywords)
+        if links:
+            all_links.extend(links)
+            logger.info(f"✅ تم العثور على {len(links)} رابط من World IPTV")
+        
+        # 4. البحث الواسع في محركات البحث (إذا لم نجد نتائج)
+        if not all_links:
+            logger.info("🔄 جاري البحث الواسع...")
+            links = self._deep_search(keywords)
+            if links:
+                all_links.extend(links)
+                logger.info(f"✅ تم العثور على {len(links)} رابط من البحث الواسع")
+        
+        # 5. إزالة التكرار
+        unique_links = list(set(all_links))
+        return unique_links[:15]  # حد أقصى 15 رابطاً
+    
+    def _search_iptv_org(self, keywords):
+        try:
+            urls = [
+                "https://iptv-org.github.io/iptv/index.m3u",
+                "https://iptv-org.github.io/iptv/index.nsfw.m3u",
+            ]
+            links = []
+            for url in urls:
+                response = self.session.get(url, timeout=10)
+                if response.status_code == 200:
+                    for keyword in keywords[:3]:
+                        pattern = rf'#EXTINF:.*,.*{re.escape(keyword)}.*\n(https?://[^\s]+)'
+                        matches = re.findall(pattern, response.text, re.IGNORECASE)
+                        links.extend(matches)
+            return links
+        except Exception as e:
+            logger.warning(f"⚠️ خطأ في iptv-org: {e}")
+            return []
+    
+    def _search_github(self, keywords):
+        try:
+            urls = [
+                "https://raw.githubusercontent.com/iptv-org/iptv/master/playlist.m3u",
+                "https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8",
+                "https://raw.githubusercontent.com/iptv-hub/iptv-hub/main/playlist.m3u"
+            ]
+            links = []
+            for url in urls:
+                response = self.session.get(url, timeout=10)
+                if response.status_code == 200:
+                    for keyword in keywords[:3]:
+                        pattern = rf'#EXTINF:.*,.*{re.escape(keyword)}.*\n(https?://[^\s]+)'
+                        matches = re.findall(pattern, response.text, re.IGNORECASE)
+                        links.extend(matches)
+            return links
+        except Exception as e:
+            logger.warning(f"⚠️ خطأ في GitHub: {e}")
+            return []
+    
+    def _search_world_iptv(self, keywords):
+        try:
+            url = "https://romaxa55.github.io/world_ip_tv/output/index.m3u"
+            response = self.session.get(url, timeout=10)
+            if response.status_code == 200:
+                links = []
+                for keyword in keywords[:3]:
+                    pattern = rf'#EXTINF:.*,.*{re.escape(keyword)}.*\n(https?://[^\s]+)'
+                    matches = re.findall(pattern, response.text, re.IGNORECASE)
+                    links.extend(matches)
+                return links
+        except Exception as e:
+            logger.warning(f"⚠️ خطأ في World IPTV: {e}")
+            return []
+    
+    def _deep_search(self, keywords):
+        """بحث واسع في محركات البحث"""
+        try:
+            links = []
+            primary = keywords[0] if keywords else "tv"
+            search_urls = [
+                f"https://www.google.com/search?q={primary}+m3u8+stream",
+                f"https://www.bing.com/search?q={primary}+m3u8",
+                f"https://html.duckduckgo.com/html/?q={primary}+m3u8",
+            ]
+            for url in search_urls:
+                try:
+                    response = self.session.get(url, timeout=10)
+                    if response.status_code == 200:
+                        pattern = r'(https?://[^\s"\']+\.m3u8[^\s"\']*)'
+                        found = re.findall(pattern, response.text, re.IGNORECASE)
+                        links.extend(found)
+                except:
+                    continue
+            return list(set(links))
+        except Exception as e:
+            logger.warning(f"⚠️ خطأ في البحث الواسع: {e}")
+            return []
+    
+    def _extract_keywords(self, channel_name):
+        keywords = []
+        original = channel_name.lower().strip()
+        keywords.append(original)
+        base_name = re.sub(r'[^a-zA-Z\s]', '', original).strip()
+        if base_name:
+            keywords.append(base_name)
+        for word in original.split():
+            if len(word) > 2:
+                keywords.append(word)
+        return list(set(keywords))
