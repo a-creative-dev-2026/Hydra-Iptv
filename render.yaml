@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: hydra-iptv
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python app.py
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: 5000
+      - key: DEBUG
+        value: false
