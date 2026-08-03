@@ -2,8 +2,10 @@ services:
   - type: web
     name: hydra-iptv
     env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    buildCommand: |
+      pip install --upgrade pip
+      pip install --no-cache-dir -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --timeout 120 --workers 1
     envVars:
       - key: HOST
         value: 0.0.0.0
@@ -15,5 +17,4 @@ services:
         value: YOUR_API_HASH
       - key: TELEGRAM_PHONE
         value: YOUR_PHONE_NUMBER
-      - key: SERPAPI_KEY
-        value: YOUR_SERPAPI_KEY  # اختياري
+    plan: starter  # ✅ استخدم خطة مدفوعة للحصول على موارد أفضل (اختياري)
