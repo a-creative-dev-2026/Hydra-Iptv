@@ -128,7 +128,7 @@ async def stats():
     }
 
 if __name__ == "__main__":
-    # Render and other platforms often use the PORT environment variable.
-    # We default to 10000 if not set, but respect the system's choice.
+    # Force port 5000 as expected by Render's current configuration
     port = int(os.environ.get("PORT", 5000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    logger.info(f"Starting server on port {port}")
+    uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")

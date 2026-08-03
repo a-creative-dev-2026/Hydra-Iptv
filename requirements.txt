@@ -4,13 +4,9 @@ aiohttp
 aiofiles
 python-multipart
 jinja2
-redis
 rapidfuzz
 beautifulsoup4
-lxml
 python-dotenv
 requests
-apscheduler
 pydantic
 pydantic-settings
-gunicorn
