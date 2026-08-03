@@ -1,9 +1,16 @@
 import json
 import time
 import os
-import redis
 from threading import Lock
 import logging
+
+# ✅ استيراد Redis اختياري (إذا لم يكن مثبتاً، يستخدم JSON)
+try:
+    import redis
+    REDIS_AVAILABLE = True
+except ImportError:
+    REDIS_AVAILABLE = False
+    redis = None
 
 logger = logging.getLogger(__name__)
 
@@ -11,11 +18,11 @@ class Cache:
     def __init__(self, ttl=3600, cache_file='cache.json', use_redis=True):
         self.ttl = ttl
         self.cache_file = cache_file
-        self.use_redis = use_redis
+        self.use_redis = use_redis and REDIS_AVAILABLE
         self.lock = Lock()
         self.redis_client = None
         
-        if use_redis:
+        if self.use_redis:
             try:
                 self.redis_client = redis.Redis(
                     host=os.getenv('REDIS_HOST', 'localhost'),
@@ -23,18 +30,17 @@ class Cache:
                     password=os.getenv('REDIS_PASSWORD', ''),
                     decode_responses=True
                 )
-                self.redis_client.ping()  # اختبار الاتصال
+                self.redis_client.ping()
                 logger.info("✅ تم الاتصال بـ Redis بنجاح")
                 self.cache = {}
             except Exception as e:
-                logger.warning(f"⚠️ فشل الاتصال بـ Redis، استخدام JSON بدلاً من ذلك: {e}")
+                logger.warning(f"⚠️ فشل الاتصال بـ Redis، استخدام JSON: {e}")
                 self.use_redis = False
                 self._load_from_disk()
         else:
             self._load_from_disk()
     
     def _load_from_disk(self):
-        """تحميل الكاش من ملف JSON"""
         if os.path.exists(self.cache_file) and os.path.getsize(self.cache_file) > 0:
             try:
                 with open(self.cache_file, 'r', encoding='utf-8') as f:
@@ -54,7 +60,6 @@ class Cache:
             self._save_to_disk()
     
     def _save_to_disk(self):
-        """حفظ الكاش في ملف JSON"""
         try:
             with open(self.cache_file, 'w', encoding='utf-8') as f:
                 json.dump(self.cache, f, ensure_ascii=False, indent=2)
@@ -62,7 +67,6 @@ class Cache:
             logger.warning(f"⚠️ خطأ في حفظ الكاش: {e}")
     
     def get(self, key):
-        """الحصول على قيمة من الكاش"""
         if self.use_redis and self.redis_client:
             try:
                 data = self.redis_client.get(f"hydra:{key}")
@@ -72,7 +76,6 @@ class Cache:
             except:
                 pass
         
-        # Fallback to JSON
         with self.lock:
             if key in self.cache:
                 entry = self.cache[key]
@@ -84,32 +87,19 @@ class Cache:
             return None
     
     def set(self, key, value):
-        """تخزين قيمة في الكاش"""
         if self.use_redis and self.redis_client:
             try:
-                data = {
-                    'data': value,
-                    'timestamp': time.time()
-                }
-                self.redis_client.setex(
-                    f"hydra:{key}",
-                    self.ttl,
-                    json.dumps(data)
-                )
+                data = {'data': value, 'timestamp': time.time()}
+                self.redis_client.setex(f"hydra:{key}", self.ttl, json.dumps(data))
                 return
             except:
                 pass
         
-        # Fallback to JSON
         with self.lock:
-            self.cache[key] = {
-                'data': value,
-                'timestamp': time.time()
-            }
+            self.cache[key] = {'data': value, 'timestamp': time.time()}
             self._save_to_disk()
     
     def remove(self, key):
-        """حذف مفتاح من الكاش"""
         if self.use_redis and self.redis_client:
             try:
                 self.redis_client.delete(f"hydra:{key}")
@@ -123,7 +113,6 @@ class Cache:
                 self._save_to_disk()
     
     def get_all(self):
-        """الحصول على جميع البيانات (للاستخدام مع المجدول)"""
         if self.use_redis and self.redis_client:
             try:
                 keys = self.redis_client.keys("hydra:*")
@@ -136,5 +125,4 @@ class Cache:
                 return result
             except:
                 pass
-        
         return self.cache
