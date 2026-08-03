@@ -1,8 +1,8 @@
 import requests
 import re
-from concurrent.futures import ThreadPoolExecutor
 import time
 import logging
+from concurrent.futures import ThreadPoolExecutor
 
 logger = logging.getLogger(__name__)
 
@@ -13,25 +13,14 @@ class ChannelSearcher:
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
             'Accept-Language': 'en-US,en;q=0.9,ar;q=0.8',
-            'Accept-Encoding': 'gzip, deflate, br',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1',
-            'Cache-Control': 'max-age=0',
         })
-        
-        # قائمة بروكسيات اختيارية
-        self.proxies = [None]  # يمكن إضافة بروكسيات هنا
+        self.proxies = [None]
     
     def search_channel(self, channel_name, country=None):
-        """البحث عن قناة مع تجاوز الحجب الجغرافي"""
         logger.info(f"🔍 جاري البحث عن: {channel_name}")
-        
         all_links = []
-        
-        # توحيد اسم القناة
         normalized = self._normalize_name(channel_name)
         
-        # 1. البحث في المصادر الرئيسية
         sources = [
             self._search_iptv_org,
             self._search_free_tv,
@@ -39,7 +28,6 @@ class ChannelSearcher:
             self._search_open_load,
         ]
         
-        # استخدام بروكسي مختلف لكل مصدر
         for idx, source_func in enumerate(sources):
             proxy = self.proxies[idx % len(self.proxies)]
             links = source_func(normalized, proxy)
@@ -47,151 +35,113 @@ class ChannelSearcher:
                 all_links.extend(links)
                 logger.info(f"✅ تم العثور على {len(links)} رابط من المصدر {idx+1}")
         
-        # 2. البحث المباشر في المواقع (تجاوز الحجب)
         if not all_links:
             logger.info("🔄 جاري البحث المباشر في المواقع...")
             all_links = self._search_web_alternative(normalized)
         
-        # 3. البحث العميق (مصادر إضافية)
         if not all_links:
             logger.info("🔍 جاري البحث العميق...")
             all_links = self._deep_search(normalized)
         
-        # 4. إزالة التكرار
         unique_links = list(set(all_links))
-        
-        # 5. التحقق من صحة الروابط (مع إعادة المحاولة)
         valid_links = self._validate_links(unique_links)
-        
         return valid_links
     
     def _normalize_name(self, name):
-        """توحيد اسم القناة لتسهيل البحث"""
-        # إزالة علامات الترقيم
         name = re.sub(r'[^\w\s]', '', name)
-        # تحويل إلى حروف صغيرة
         name = name.lower()
-        # إزالة كلمات شائعة
         for word in ['hd', 'tv', 'channel', 'live', 'stream', 'sd', '4k', 'fhd', 'uhd']:
             name = name.replace(word, '')
-        # إزالة مسافات زائدة
         name = ' '.join(name.split())
         return name
     
     def _search_iptv_org(self, channel_name, proxy=None):
-        """البحث في iptv-org"""
         try:
             urls = [
                 "https://iptv-org.github.io/iptv/index.m3u",
                 "https://iptv-org.github.io/iptv/index.nsfw.m3u",
             ]
             links = []
-            
             for url in urls:
-                response = self.session.get(url, timeout=15, proxies={'http': proxy, 'https': proxy} if proxy else None)
+                response = self.session.get(url, timeout=15)
                 if response.status_code == 200:
                     pattern = rf'#EXTINF:.*,.*{re.escape(channel_name)}.*\n(https?://[^\s]+)'
                     matches = re.findall(pattern, response.text, re.IGNORECASE)
                     links.extend(matches)
-            
             return links
         except Exception as e:
             logger.warning(f"⚠️ خطأ في iptv-org: {e}")
             return []
     
     def _search_free_tv(self, channel_name, proxy=None):
-        """البحث في Free-TV"""
         try:
             url = "https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8"
-            response = self.session.get(url, timeout=15, proxies={'http': proxy, 'https': proxy} if proxy else None)
-            
+            response = self.session.get(url, timeout=15)
             if response.status_code == 200:
                 pattern = rf'#EXTINF:.*,.*{re.escape(channel_name)}.*\n(https?://[^\s]+)'
-                matches = re.findall(pattern, response.text, re.IGNORECASE)
-                return matches
+                return re.findall(pattern, response.text, re.IGNORECASE)
         except Exception as e:
             logger.warning(f"⚠️ خطأ في Free-TV: {e}")
-        
         return []
     
     def _search_github(self, channel_name, proxy=None):
-        """البحث في مستودعات GitHub"""
         try:
-            # محاولة جلب من مصادر متعددة
             urls = [
                 "https://raw.githubusercontent.com/iptv-org/iptv/master/playlist.m3u",
                 "https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8",
                 "https://raw.githubusercontent.com/iptv-hub/iptv-hub/main/playlist.m3u"
             ]
             links = []
-            
             for url in urls:
-                response = self.session.get(url, timeout=15, proxies={'http': proxy, 'https': proxy} if proxy else None)
+                response = self.session.get(url, timeout=15)
                 if response.status_code == 200:
                     pattern = rf'#EXTINF:.*,.*{re.escape(channel_name)}.*\n(https?://[^\s]+)'
                     matches = re.findall(pattern, response.text, re.IGNORECASE)
                     links.extend(matches)
-            
             return links
         except Exception as e:
             logger.warning(f"⚠️ خطأ في GitHub: {e}")
-        
         return []
     
     def _search_open_load(self, channel_name, proxy=None):
-        """البحث في OpenLoad"""
         try:
-            # البحث في ملفات GitHub مباشرة
-            url = f"https://raw.githubusercontent.com/iptv-org/iptv/master/playlist.m3u"
-            response = self.session.get(url, timeout=15, proxies={'http': proxy, 'https': proxy} if proxy else None)
-            
+            url = "https://raw.githubusercontent.com/iptv-org/iptv/master/playlist.m3u"
+            response = self.session.get(url, timeout=15)
             if response.status_code == 200:
                 pattern = rf'#EXTINF:.*,.*{re.escape(channel_name)}.*\n(https?://[^\s]+)'
-                matches = re.findall(pattern, response.text, re.IGNORECASE)
-                return matches
+                return re.findall(pattern, response.text, re.IGNORECASE)
         except Exception as e:
             logger.warning(f"⚠️ خطأ في OpenLoad: {e}")
-        
         return []
     
     def _search_web_alternative(self, channel_name):
-        """استخدام محركات بحث بديلة"""
         try:
-            # استخدام DuckDuckGo (أقل حجباً)
             url = f"https://html.duckduckgo.com/html/?q={channel_name.replace(' ', '+')}+m3u8+live"
             response = self.session.get(url, timeout=10)
             if response.status_code == 200:
                 pattern = r'(https?://[^\s"\']+\.m3u8[^\s"\']*)'
-                matches = re.findall(pattern, response.text, re.IGNORECASE)
-                return matches
+                return re.findall(pattern, response.text, re.IGNORECASE)
         except Exception as e:
             logger.warning(f"⚠️ خطأ في DuckDuckGo: {e}")
         
-        # استخدام Bing كبديل
         try:
             url = f"https://www.bing.com/search?q={channel_name.replace(' ', '+')}+m3u8"
             response = self.session.get(url, timeout=10)
             if response.status_code == 200:
                 pattern = r'(https?://[^\s"\']+\.m3u8[^\s"\']*)'
-                matches = re.findall(pattern, response.text, re.IGNORECASE)
-                return matches
+                return re.findall(pattern, response.text, re.IGNORECASE)
         except Exception as e:
             logger.warning(f"⚠️ خطأ في Bing: {e}")
-        
         return []
     
     def _deep_search(self, channel_name):
-        """بحث عميق في مصادر متعددة"""
         try:
-            # استخدام مصادر مفتوحة متعددة
-            base_urls = [
+            urls = [
                 "https://iptv-org.github.io/iptv/playlist.m3u",
                 "https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8",
             ]
-            
             all_links = []
-            
-            for url in base_urls:
+            for url in urls:
                 try:
                     response = self.session.get(url, timeout=20)
                     if response.status_code == 200:
@@ -200,20 +150,15 @@ class ChannelSearcher:
                         all_links.extend(matches)
                 except:
                     continue
-            
             return all_links
         except Exception as e:
             logger.warning(f"⚠️ خطأ في البحث العميق: {e}")
-        
         return []
     
     def _validate_links(self, links):
-        """اختبار صحة الروابط مع إعادة المحاولة"""
         valid = []
-        
-        for link in links[:10]:  # حد أقصى 10 روابط
+        for link in links[:10]:
             try:
-                # محاولة الاتصال مرتين إذا فشلت الأولى
                 for attempt in range(2):
                     try:
                         response = self.session.head(link, timeout=5, allow_redirects=True)
@@ -223,10 +168,9 @@ class ChannelSearcher:
                             break
                     except:
                         if attempt == 0:
-                            time.sleep(1)  # انتظر قبل إعادة المحاولة
+                            time.sleep(1)
                         continue
             except Exception as e:
                 logger.warning(f"❌ رابط غير صالح: {link[:50]}... - {str(e)[:50]}")
                 continue
-        
         return valid
