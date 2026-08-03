@@ -9,4 +9,11 @@ services:
         value: 0.0.0.0
       - key: DEBUG
         value: false
-      # ملاحظة: تم حذف PORT من هنا، لأن Render يديرها تلقائياً
+      - key: TELEGRAM_API_ID
+        value: YOUR_API_ID
+      - key: TELEGRAM_API_HASH
+        value: YOUR_API_HASH
+      - key: TELEGRAM_PHONE
+        value: YOUR_PHONE_NUMBER
+      - key: SERPAPI_KEY
+        value: YOUR_SERPAPI_KEY  # اختياري
