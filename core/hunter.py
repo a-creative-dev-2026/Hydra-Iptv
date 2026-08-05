@@ -34,7 +34,7 @@ class IPTVHunter:
             "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
             "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1"
         ]
-        self.semaphore = asyncio.Semaphore(10)
+        self.semaphore = asyncio.Semaphore(5)
 
     def get_headers(self):
         import random
@@ -49,7 +49,8 @@ class IPTVHunter:
     async def fetch_m3u(self, session: aiohttp.ClientSession, url: str) -> str:
         async with self.semaphore:
             try:
-                async with session.get(url, headers=self.get_headers(), timeout=25) as response:
+                # Reduced timeout to 10s to prevent global timeout
+                async with session.get(url, headers=self.get_headers(), timeout=10) as response:
                     if response.status == 200:
                         return await response.text()
             except Exception as e:
@@ -102,19 +103,19 @@ class IPTVHunter:
         if not all_results:
             all_results = await self.shadow_search(query)
 
+        # Optimization: Only validate top 3 if we have many results, to save time
         if all_results:
             async with aiohttp.ClientSession() as session:
-                # Reduced validation count to 5 for faster response on cloud platforms
-                top_results = all_results[:5]
+                top_results = all_results[:3]
                 validation_tasks = [self.validate_link(session, res['url']) for res in top_results]
                 valid_flags = await asyncio.gather(*validation_tasks)
                 
                 for i, is_valid in enumerate(valid_flags):
                     if is_valid:
-                        top_results[i]['score'] += 100
+                        top_results[i]['score'] += 200
                         top_results[i]['status'] = "online"
                     else:
-                        top_results[i]['status'] = "unchecked"
+                        top_results[i]['status'] = "offline"
         
         qualities = {"FHD": [], "HD": [], "SD": []}
         for res in all_results:
