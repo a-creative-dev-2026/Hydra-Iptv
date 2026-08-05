@@ -3,77 +3,92 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hydra IPTV | Dashboard</title>
+    <title>Hydra IPTV - Absolute Sovereignty</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap');
-        body { font-family: 'Tajawal', sans-serif; background-color: #0f172a; color: #f8fafc; }
-        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
-        .gradient-text { background: linear-gradient(90deg, #38bdf8, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        body { font-family: 'Cairo', sans-serif; background-color: #0f172a; color: #f8fafc; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .monster-gradient { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); }
+        .card-hover:hover { transform: translateY(-5px); border-color: #3b82f6; box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.3); }
+        .loader { border-top-color: #3b82f6; animation: spinner 1.5s linear infinite; }
+        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
-<body class="min-h-screen p-4 md:p-8">
-    <div class="max-w-6xl mx-auto">
-        <!-- Header -->
-        <header class="flex flex-col md:flex-row justify-between items-center mb-12 gap-4">
-            <div class="flex items-center gap-4">
-                <div class="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20">
-                    <i class="fas fa-dragon text-3xl text-white"></i>
-                </div>
-                <div>
-                    <h1 class="text-3xl font-bold gradient-text">Hydra IPTV v4.0</h1>
-                    <p class="text-slate-400">خادم البث الذكي والمحترف</p>
-                </div>
+<body class="min-h-screen">
+    <!-- Navbar -->
+    <nav class="glass sticky top-0 z-50 px-6 py-4 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 monster-gradient rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/50">
+                <i class="fas fa-dragon text-white text-xl"></i>
             </div>
-            <div class="flex gap-4">
-                <div class="glass px-6 py-3 rounded-xl flex items-center gap-3">
-                    <span class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></span>
-                    <span class="font-bold">الحالة: متصل</span>
-                </div>
-            </div>
-        </header>
+            <h1 class="text-2xl font-bold tracking-tight">HYDRA <span class="text-blue-500">IPTV</span></h1>
+        </div>
+        <div class="flex gap-4">
+            <span id="server-status" class="flex items-center gap-2 text-sm bg-green-500/10 text-green-500 px-3 py-1 rounded-full border border-green-500/20">
+                <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                السيادة المطلقة v5.0
+            </span>
+        </div>
+    </nav>
 
-        <!-- Search Section -->
-        <section class="mb-12">
-            <div class="glass p-6 rounded-3xl shadow-2xl">
-                <div class="relative">
-                    <input type="text" id="searchInput" placeholder="ابحث عن قناة (مثال: beIN Sports, CNN, MBC)..." 
-                        class="w-full bg-slate-900/50 border border-slate-700 text-white rounded-2xl py-4 px-6 pr-14 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-lg">
-                    <button onclick="searchChannel()" class="absolute left-4 top-1/2 -translate-y-1/2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl transition-all font-bold">
-                        بحث
-                    </button>
-                    <i class="fas fa-search absolute right-6 top-1/2 -translate-y-1/2 text-slate-500 text-xl"></i>
-                </div>
-            </div>
-        </section>
+    <!-- Hero Section -->
+    <header class="container mx-auto px-6 py-16 text-center">
+        <h2 class="text-5xl font-extrabold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
+            صياد القنوات الذكي والأقوى
+        </h2>
+        <p class="text-slate-400 text-lg mb-10 max-w-2xl mx-auto">
+            ابحث عن أي قناة، استمتع ببث FHD، وتجاوز كل الحمايات بنظام "السيادة المطلقة" المتطور.
+        </p>
+        
+        <!-- Search Bar -->
+        <div class="max-w-3xl mx-auto relative group">
+            <input type="text" id="searchInput" placeholder="اكتب اسم القناة (مثلاً: beIN Sports 1)..." 
+                class="w-full bg-slate-800/50 border-2 border-slate-700 rounded-2xl px-6 py-5 pr-14 text-xl focus:outline-none focus:border-blue-500 transition-all text-right">
+            <i class="fas fa-search absolute left-6 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 text-xl"></i>
+            <button onclick="performSearch()" class="absolute right-3 top-1/2 -translate-y-1/2 bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-lg shadow-blue-600/30">
+                صيد
+            </button>
+        </div>
+    </header>
 
-        <!-- Results Section -->
-        <section id="resultsSection" class="hidden">
-            <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
-                <i class="fas fa-list-ul text-blue-500"></i>
-                نتائج البحث
-            </h2>
+    <!-- Results Section -->
+    <main class="container mx-auto px-6 pb-20">
+        <div id="loading" class="hidden flex flex-col items-center py-20">
+            <div class="loader ease-linear rounded-full border-4 border-t-4 border-slate-700 h-16 w-16 mb-4"></div>
+            <p class="text-slate-400 animate-pulse">جاري الصيد في أعماق الإنترنت...</p>
+        </div>
+
+        <div id="resultsSection" class="hidden">
+            <div class="flex justify-between items-center mb-8">
+                <h3 class="text-2xl font-bold flex items-center gap-3">
+                    <i class="fas fa-bolt text-yellow-500"></i>
+                    نتائج الصيد
+                </h3>
+                <span id="resultCount" class="text-slate-500 bg-slate-800 px-4 py-1 rounded-lg text-sm"></span>
+            </div>
+            
             <div id="resultsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <!-- Cards will be injected here -->
             </div>
-        </section>
-
-        <!-- Loading State -->
-        <div id="loading" class="hidden flex flex-col items-center justify-center py-20">
-            <div class="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p class="text-xl text-slate-400">جاري البحث في المصادر العالمية...</p>
         </div>
-    </div>
+    </main>
 
     <script>
-        async function searchChannel() {
-            const query = document.getElementById('searchInput').value;
-            if (!query) return;
+        const searchInput = document.getElementById('searchInput');
+        const resultsSection = document.getElementById('resultsSection');
+        const resultsGrid = document.getElementById('resultsGrid');
+        const loading = document.getElementById('loading');
+        const resultCount = document.getElementById('resultCount');
 
-            const loading = document.getElementById('loading');
-            const resultsSection = document.getElementById('resultsSection');
-            const resultsGrid = document.getElementById('resultsGrid');
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') performSearch();
+        });
+
+        async function performSearch() {
+            const query = searchInput.value.trim();
+            if (!query) return;
 
             loading.classList.remove('hidden');
             resultsSection.classList.add('hidden');
@@ -83,32 +98,36 @@
                 const response = await fetch(`/search/${encodeURIComponent(query)}`);
                 const data = await response.json();
 
+                loading.classList.add('hidden');
+
                 if (data.found) {
+                    resultCount.innerText = `${data.count} قناة تم العثور عليها`;
                     data.channels.forEach(channel => {
                         const card = document.createElement('div');
-                        card.className = 'glass p-6 rounded-2xl hover:border-blue-500/50 transition-all group';
-                        const qualityColor = channel.quality === 'FHD' ? 'text-red-500' : (channel.quality === 'HD' ? 'text-yellow-500' : 'text-blue-500');
+                        card.className = 'glass p-6 rounded-2xl card-hover transition-all';
+                        
+                        const qualityClass = channel.quality === 'FHD' ? 'bg-red-500/20 text-red-500' : 
+                                           (channel.quality === 'HD' ? 'bg-yellow-500/20 text-yellow-500' : 'bg-blue-500/20 text-blue-500');
+                        
+                        const statusBadge = channel.status === 'online' ? 
+                            '<span class="bg-green-500/10 text-green-500 text-[10px] px-2 py-0.5 rounded-full border border-green-500/20">LIVE</span>' : '';
+
                         card.innerHTML = `
                             <div class="flex justify-between items-start mb-4">
-                                <div class="w-12 h-12 bg-slate-800 rounded-lg flex items-center justify-center">
-                                    <i class="fas fa-tv ${qualityColor} text-xl"></i>
-                                </div>
-                                <div class="flex flex-col items-end">
-                                    <span class="bg-green-500/10 text-green-500 text-xs font-bold px-3 py-1 rounded-full mb-1">نشط</span>
-                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-700 text-slate-300 uppercase">${channel.quality}</span>
+                                <img src="${channel.logo}" class="w-14 h-14 rounded-xl object-cover border border-slate-700 shadow-md" onerror="this.src='https://ui-avatars.com/api/?name=TV&background=random'">
+                                <div class="flex flex-col items-end gap-1">
+                                    ${statusBadge}
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded ${qualityClass} uppercase">${channel.quality}</span>
                                 </div>
                             </div>
-                            <h3 class="text-xl font-bold mb-1 truncate">${channel.name}</h3>
-                            <div class="flex items-center gap-2 mb-4">
-                                <span class="text-xs text-slate-500">جودة: <b class="${qualityColor}">${channel.quality}</b></span>
-                                <span class="text-xs text-slate-500">|</span>
-                                <span class="text-xs text-slate-500">تجاوز الأعطال: <b class="text-green-500">مفعل</b></span>
-                            </div>
+                            <h3 class="text-xl font-bold mb-1 truncate text-right">${channel.name}</h3>
+                            <p class="text-slate-500 text-xs mb-4 text-right">${channel.group}</p>
+                            
                             <div class="flex gap-2">
-                                <a href="/channel/${encodeURIComponent(channel.name)}" target="_blank" class="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white py-3 rounded-xl text-center font-bold transition-all shadow-lg shadow-blue-500/20">
-                                    <i class="fas fa-play-circle ml-2"></i> تشغيل الوحش
+                                <a href="/channel/${encodeURIComponent(channel.name)}" target="_blank" class="flex-1 monster-gradient hover:opacity-90 text-white py-3 rounded-xl text-center font-bold transition-all shadow-lg shadow-blue-600/20">
+                                    <i class="fas fa-play-circle ml-2"></i> تشغيل
                                 </a>
-                                <button onclick="copyToClipboard('${channel.url}')" class="w-12 bg-slate-800 hover:bg-slate-700 rounded-xl transition-all text-slate-400">
+                                <button onclick="copyToClipboard('${window.location.origin}/channel/${encodeURIComponent(channel.name)}')" class="w-12 bg-slate-800 hover:bg-slate-700 rounded-xl transition-all text-slate-400">
                                     <i class="fas fa-link"></i>
                                 </button>
                             </div>
@@ -117,25 +136,19 @@
                     });
                     resultsSection.classList.remove('hidden');
                 } else {
-                    alert('لم يتم العثور على نتائج');
+                    alert('لم يتم العثور على القناة المطلوبة. حاول بكلمات أخرى.');
                 }
             } catch (error) {
-                console.error('Error:', error);
-                alert('حدث خطأ أثناء البحث');
-            } finally {
                 loading.classList.add('hidden');
+                alert('حدث خطأ أثناء الصيد. تأكد من اتصالك بالسيرفر.');
             }
         }
 
         function copyToClipboard(text) {
-            navigator.clipboard.writeText(text);
-            alert('تم نسخ الرابط!');
+            navigator.clipboard.writeText(text).then(() => {
+                alert('تم نسخ رابط البث المباشر!');
+            });
         }
-
-        // Search on Enter
-        document.getElementById('searchInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') searchChannel();
-        });
     </script>
 </body>
 </html>

@@ -1,6 +1,7 @@
 import os
 import logging
-from fastapi import FastAPI, Request, HTTPException
+import time
+from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,9 +18,9 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("HydraIPTV")
 
 app = FastAPI(
-    title="Hydra IPTV API",
-    description="Advanced IPTV Proxy and Search Engine",
-    version="4.0.0"
+    title="Hydra IPTV - Absolute Sovereignty",
+    description="Ultra-Advanced IPTV Predator & Proxy Engine",
+    version="5.0.0"
 )
 
 # CORS
@@ -29,6 +30,22 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Rate Limiting Logic
+rate_limit_data = {}
+async def rate_limiter(request: Request):
+    client_ip = request.client.host
+    now = time.time()
+    if client_ip in rate_limit_data:
+        last_request, count = rate_limit_data[client_ip]
+        if now - last_request < 1:
+            if count > 10: # 10 requests per second
+                raise HTTPException(status_code=429, detail="Too many requests - Slow down, predator!")
+            rate_limit_data[client_ip] = (last_request, count + 1)
+        else:
+            rate_limit_data[client_ip] = (now, 1)
+    else:
+        rate_limit_data[client_ip] = (now, 1)
 
 # Components
 hunter = IPTVHunter()
@@ -47,9 +64,9 @@ async def index():
     except FileNotFoundError:
         return "<h1>Hydra IPTV v4.0</h1><p>Dashboard file not found. Check static/index.html</p>"
 
-@app.get("/search/{query}", response_model=SearchResult)
+@app.get("/search/{query}", response_model=SearchResult, dependencies=[Depends(rate_limiter)])
 async def search(query: str):
-    logger.info(f"Deep hunting for: {query}")
+    logger.info(f"Absolute Deep hunting for: {query}")
     
     cached = await cache.get(query)
     if cached:
@@ -112,14 +129,19 @@ async def list_countries():
 async def list_categories():
     return [{"id": k, "name": v['name']} for k, v in CATEGORIES.items()]
 
+@app.get("/health")
+async def health():
+    return {"status": "healthy", "uptime": time.time(), "version": "5.0.0"}
+
 @app.get("/stats")
 async def stats():
     return {
         "status": "online",
+        "engine": "Absolute Sovereignty",
         "cache": cache.get_stats(),
         "total_countries": len(COUNTRY_CHANNELS),
         "total_categories": len(CATEGORIES),
-        "version": "4.0.0"
+        "version": "5.0.0"
     }
 
 if __name__ == "__main__":
