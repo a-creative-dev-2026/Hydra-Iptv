@@ -21,7 +21,11 @@ class IPTVHunter:
             "https://raw.githubusercontent.com/pizofre/iptv/master/playlist.m3u8",
             "https://raw.githubusercontent.com/Yebon/IPTV/main/playlist.m3u",
             "https://raw.githubusercontent.com/m3u8playlist/countries/main/arabic.m3u",
-            "https://raw.githubusercontent.com/Moebis/TV/master/playlist.m3u8"
+            "https://raw.githubusercontent.com/Moebis/TV/master/playlist.m3u8",
+            "https://raw.githubusercontent.com/dtankf/Vip-Iptv/main/Vip-Iptv.m3u",
+            "https://raw.githubusercontent.com/m3u8playlist/countries/main/france.m3u",
+            "https://raw.githubusercontent.com/m3u8playlist/countries/main/uk.m3u",
+            "https://raw.githubusercontent.com/m3u8playlist/countries/main/usa.m3u"
         ]
         self.local_playlists_dir = "data/playlists"
         self.user_agents = [
@@ -54,38 +58,46 @@ class IPTVHunter:
 
     def parse_m3u(self, content: str, query: str) -> List[dict]:
         results = []
-        # Support various M3U formats and attributes
-        pattern = r'#EXTINF:.*?(?:tvg-logo="(.*?)")?.*?,(.*?)\n(https?://[^\s]+)'
+        # Predatory Pattern: Capture more metadata and handle messy M3U formats
+        pattern = r'#EXTINF:.*?(?:tvg-id="(.*?)")?.*?(?:tvg-logo="(.*?)")?.*?,(.*?)\n(https?://[^\s]+)'
         matches = re.findall(pattern, content, re.IGNORECASE | re.MULTILINE)
         
         query_clean = query.lower().strip()
         
-        for logo, name, url in matches:
+        for tvg_id, logo, name, url in matches:
             name_clean = name.strip()
             name_lower = name_clean.lower()
             
-            # Monster Accuracy Logic: Check for exact match or high confidence fuzzy match
-            ratio = fuzz.token_sort_ratio(query_clean, name_lower)
+            # Predatory Accuracy: Multi-stage verification
+            # 1. Exact match check
+            # 2. Token set ratio (handles word order)
+            # 3. Partial ratio (handles extra text)
+            
+            token_ratio = fuzz.token_set_ratio(query_clean, name_lower)
             partial_ratio = fuzz.partial_ratio(query_clean, name_lower)
             
-            # If query is a substring of the name, it's highly relevant
-            is_substring = query_clean in name_lower
+            # Predatory Rule: If query is "beIN Sports 1", don't just return "beIN Sports"
+            # It must contain all parts of the query for high score
+            query_words = query_clean.split()
+            all_words_present = all(word in name_lower for word in query_words)
             
-            if ratio > 80 or (is_substring and partial_ratio > 90):
+            if (token_ratio > 90 and all_words_present) or (partial_ratio == 100 and len(query_clean) > 3):
                 # Detect quality
                 quality = "SD"
-                if any(q in name_lower for q in ["fhd", "1080p", "4k"]): quality = "FHD"
+                if any(q in name_lower for q in ["fhd", "1080p", "4k", "uhd"]): quality = "FHD"
                 elif any(q in name_lower for q in ["hd", "720p"]): quality = "HD"
                 
-                # Token/Protection Handling: Detect if URL needs special treatment
-                # (Logic to be used by the proxy to handle sessions/tokens)
+                # Boost score for exact matches and quality
+                score = token_ratio
+                if all_words_present: score += 20
+                if quality == "FHD": score += 10
                 
                 results.append({
                     "name": name_clean,
                     "url": url.strip(),
                     "logo": logo if logo else None,
                     "quality": quality,
-                    "score": ratio + (10 if is_substring else 0) + (5 if quality == "FHD" else 0)
+                    "score": score
                 })
         return results
 
