@@ -104,7 +104,8 @@ class IPTVHunter:
 
         if all_results:
             async with aiohttp.ClientSession() as session:
-                top_results = all_results[:15]
+                # Reduced validation count to 5 for faster response on cloud platforms
+                top_results = all_results[:5]
                 validation_tasks = [self.validate_link(session, res['url']) for res in top_results]
                 valid_flags = await asyncio.gather(*validation_tasks)
                 
