@@ -133,6 +133,29 @@ async def list_categories():
 async def health():
     return {"status": "healthy", "uptime": time.time(), "version": "5.0.0"}
 
+@app.get("/export/{query}")
+async def export_m3u(query: str):
+    logger.info(f"Exporting M3U for: {query}")
+    results = await hunter.deep_hunt(query)
+    if not results:
+        raise HTTPException(status_code=404, detail="No channels found for export")
+    
+    m3u_content = "#EXTM3U\n"
+    for ch in results:
+        logo = ch.get('logo', '')
+        group = ch.get('group', 'General')
+        name = ch.get('name', 'Unknown')
+        # Use our proxy URL for failover
+        proxy_url = f"https://hydra-iptv.onrender.com/channel/{name}"
+        m3u_content += f'#EXTINF:-1 tvg-logo="{logo}" group-title="{group}",{name}\n{proxy_url}\n'
+    
+    return Response(content=m3u_content, media_type="application/x-mpegurl", headers={"Content-Disposition": f"attachment; filename=hydra_{query}.m3u"})
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    if hunter._session:
+        await hunter._session.close()
+
 @app.get("/stats")
 async def stats():
     return {
@@ -141,7 +164,8 @@ async def stats():
         "cache": cache.get_stats(),
         "total_countries": len(COUNTRY_CHANNELS),
         "total_categories": len(CATEGORIES),
-        "version": "5.0.0"
+        "version": "5.0.0",
+        "turbo": True
     }
 
 if __name__ == "__main__":

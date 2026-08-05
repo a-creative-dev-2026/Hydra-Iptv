@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hydra IPTV - Absolute Sovereignty</title>
+    <title>Hydra IPTV - Absolute Sovereignty Turbo</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;700&display=swap" rel="stylesheet">
@@ -14,6 +14,7 @@
         .card-hover:hover { transform: translateY(-5px); border-color: #3b82f6; box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.3); }
         .loader { border-top-color: #3b82f6; animation: spinner 1.5s linear infinite; }
         @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .turbo-badge { background: linear-gradient(90deg, #f59e0b, #ef4444); }
     </style>
 </head>
 <body class="min-h-screen">
@@ -26,9 +27,9 @@
             <h1 class="text-2xl font-bold tracking-tight">HYDRA <span class="text-blue-500">IPTV</span></h1>
         </div>
         <div class="flex gap-4">
-            <span id="server-status" class="flex items-center gap-2 text-sm bg-green-500/10 text-green-500 px-3 py-1 rounded-full border border-green-500/20">
-                <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                السيادة المطلقة v5.0
+            <span id="server-status" class="flex items-center gap-2 text-sm turbo-badge text-white px-3 py-1 rounded-full shadow-lg shadow-orange-500/20">
+                <i class="fas fa-bolt"></i>
+                TURBO v5.0
             </span>
         </div>
     </nav>
@@ -36,10 +37,10 @@
     <!-- Hero Section -->
     <header class="container mx-auto px-6 py-16 text-center">
         <h2 class="text-5xl font-extrabold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
-            صياد القنوات الذكي والأقوى
+            صياد القنوات الأسرع والأذكى
         </h2>
         <p class="text-slate-400 text-lg mb-10 max-w-2xl mx-auto">
-            ابحث عن أي قناة، استمتع ببث FHD، وتجاوز كل الحمايات بنظام "السيادة المطلقة" المتطور.
+            ابحث عن أي قناة، استمتع ببث FHD، وحمّل قائمتك الخاصة بنظام "TURBO" الجديد.
         </p>
         
         <!-- Search Bar -->
@@ -48,7 +49,7 @@
                 class="w-full bg-slate-800/50 border-2 border-slate-700 rounded-2xl px-6 py-5 pr-14 text-xl focus:outline-none focus:border-blue-500 transition-all text-right">
             <i class="fas fa-search absolute left-6 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 text-xl"></i>
             <button onclick="performSearch()" class="absolute right-3 top-1/2 -translate-y-1/2 bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-lg shadow-blue-600/30">
-                صيد
+                صيد سريع
             </button>
         </div>
     </header>
@@ -57,7 +58,7 @@
     <main class="container mx-auto px-6 pb-20">
         <div id="loading" class="hidden flex flex-col items-center py-20">
             <div class="loader ease-linear rounded-full border-4 border-t-4 border-slate-700 h-16 w-16 mb-4"></div>
-            <p class="text-slate-400 animate-pulse">جاري الصيد في أعماق الإنترنت...</p>
+            <p class="text-slate-400 animate-pulse">جاري الصيد التوربيني...</p>
         </div>
 
         <div id="resultsSection" class="hidden">
@@ -66,7 +67,12 @@
                     <i class="fas fa-bolt text-yellow-500"></i>
                     نتائج الصيد
                 </h3>
-                <span id="resultCount" class="text-slate-500 bg-slate-800 px-4 py-1 rounded-lg text-sm"></span>
+                <div class="flex gap-3">
+                    <button id="exportBtn" onclick="exportM3U()" class="text-sm bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-xl border border-slate-700 transition-all">
+                        <i class="fas fa-file-download ml-2"></i> تصدير M3U
+                    </button>
+                    <span id="resultCount" class="text-slate-500 bg-slate-800 px-4 py-2 rounded-xl text-sm border border-slate-700"></span>
+                </div>
             </div>
             
             <div id="resultsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -81,6 +87,7 @@
         const resultsGrid = document.getElementById('resultsGrid');
         const loading = document.getElementById('loading');
         const resultCount = document.getElementById('resultCount');
+        let currentQuery = '';
 
         searchInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') performSearch();
@@ -89,6 +96,7 @@
         async function performSearch() {
             const query = searchInput.value.trim();
             if (!query) return;
+            currentQuery = query;
 
             loading.classList.remove('hidden');
             resultsSection.classList.add('hidden');
@@ -101,7 +109,7 @@
                 loading.classList.add('hidden');
 
                 if (data.found) {
-                    resultCount.innerText = `${data.count} قناة تم العثور عليها`;
+                    resultCount.innerText = `${data.count} قناة`;
                     data.channels.forEach(channel => {
                         const card = document.createElement('div');
                         card.className = 'glass p-6 rounded-2xl card-hover transition-all';
@@ -110,7 +118,8 @@
                                            (channel.quality === 'HD' ? 'bg-yellow-500/20 text-yellow-500' : 'bg-blue-500/20 text-blue-500');
                         
                         const statusBadge = channel.status === 'online' ? 
-                            '<span class="bg-green-500/10 text-green-500 text-[10px] px-2 py-0.5 rounded-full border border-green-500/20">LIVE</span>' : '';
+                            '<span class="bg-green-500/10 text-green-500 text-[10px] px-2 py-0.5 rounded-full border border-green-500/20">LIVE</span>' : 
+                            (channel.status === 'offline' ? '<span class="bg-red-500/10 text-red-500 text-[10px] px-2 py-0.5 rounded-full border border-red-500/20">OFFLINE</span>' : '');
 
                         card.innerHTML = `
                             <div class="flex justify-between items-start mb-4">
@@ -142,6 +151,11 @@
                 loading.classList.add('hidden');
                 alert('حدث خطأ أثناء الصيد. تأكد من اتصالك بالسيرفر.');
             }
+        }
+
+        function exportM3U() {
+            if (!currentQuery) return;
+            window.location.href = `/export/${encodeURIComponent(currentQuery)}`;
         }
 
         function copyToClipboard(text) {

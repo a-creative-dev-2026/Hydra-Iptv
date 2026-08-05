@@ -34,7 +34,14 @@ class IPTVHunter:
             "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
             "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1"
         ]
-        self.semaphore = asyncio.Semaphore(5)
+        self.semaphore = asyncio.Semaphore(10)
+        self._session = None
+
+    async def get_session(self):
+        if self._session is None or self._session.closed:
+            timeout = aiohttp.ClientTimeout(total=15, connect=5)
+            self._session = aiohttp.ClientSession(timeout=timeout)
+        return self._session
 
     def get_headers(self):
         import random
@@ -49,8 +56,7 @@ class IPTVHunter:
     async def fetch_m3u(self, session: aiohttp.ClientSession, url: str) -> str:
         async with self.semaphore:
             try:
-                # Reduced timeout to 10s to prevent global timeout
-                async with session.get(url, headers=self.get_headers(), timeout=10) as response:
+                async with session.get(url, headers=self.get_headers()) as response:
                     if response.status == 200:
                         return await response.text()
             except Exception as e:
@@ -59,19 +65,24 @@ class IPTVHunter:
 
     def parse_m3u(self, content: str, query: str) -> List[dict]:
         results = []
+        # Pattern for #EXTINF metadata and URL
         pattern = r'#EXTINF:.*?(?:tvg-id="(.*?)")?.*?(?:tvg-logo="(.*?)")?.*?(?:group-title="(.*?)")?.*?,(.*?)\n(https?://[^\s]+)'
         matches = re.findall(pattern, content, re.IGNORECASE | re.MULTILINE)
         
         query_clean = query.lower().strip()
+        query_words = query_clean.split()
         
         for tvg_id, logo, group, name, url in matches:
             name_clean = name.strip()
             name_lower = name_clean.lower()
             
+            # Fast Check: Skip if name doesn't contain any query words
+            if not any(word in name_lower for word in query_words):
+                continue
+
             token_ratio = fuzz.token_set_ratio(query_clean, name_lower)
             partial_ratio = fuzz.partial_ratio(query_clean, name_lower)
             
-            query_words = query_clean.split()
             all_words_present = all(word in name_lower for word in query_words)
             
             if (token_ratio > 85 and all_words_present) or (partial_ratio == 100 and len(query_clean) > 2):
@@ -94,68 +105,73 @@ class IPTVHunter:
                 })
         return results
 
-    async def shadow_search(self, query: str) -> List[dict]:
-        return []
-
     async def deep_hunt(self, query: str) -> List[dict]:
-        all_results = await self.hunt(query)
+        # Step 1: Fast Local Search
+        local_results = await self.search_local(query)
         
-        if not all_results:
-            all_results = await self.shadow_search(query)
-
-        # Optimization: Only validate top 3 if we have many results, to save time
-        if all_results:
-            async with aiohttp.ClientSession() as session:
-                top_results = all_results[:3]
-                validation_tasks = [self.validate_link(session, res['url']) for res in top_results]
-                valid_flags = await asyncio.gather(*validation_tasks)
-                
-                for i, is_valid in enumerate(valid_flags):
-                    if is_valid:
-                        top_results[i]['score'] += 200
-                        top_results[i]['status'] = "online"
-                    else:
-                        top_results[i]['status'] = "offline"
+        # Step 2: Parallel Remote Search
+        remote_results = await self.hunt_remote(query)
         
-        qualities = {"FHD": [], "HD": [], "SD": []}
+        all_results = local_results + remote_results
+        
+        # Deduplicate
+        unique_results = {}
         for res in all_results:
+            url = res['url']
+            if url not in unique_results or res['score'] > unique_results[url]['score']:
+                unique_results[url] = res
+        
+        final_list = sorted(unique_results.values(), key=lambda x: x['score'], reverse=True)
+
+        # Step 3: Fast Validation (Top 3)
+        if final_list:
+            session = await self.get_session()
+            top_3 = final_list[:3]
+            validation_tasks = [self.validate_link(session, res['url']) for res in top_3]
+            valid_flags = await asyncio.gather(*validation_tasks)
+            
+            for i, is_valid in enumerate(valid_flags):
+                if is_valid:
+                    top_3[i]['score'] += 200
+                    top_3[i]['status'] = "online"
+                else:
+                    top_3[i]['status'] = "offline"
+        
+        # Final Grouping and Sorting
+        qualities = {"FHD": [], "HD": [], "SD": []}
+        for res in final_list:
             qualities[res.get("quality", "SD")].append(res)
         
-        final_list = []
+        sorted_final = []
         for q in ["FHD", "HD", "SD"]:
             sorted_q = sorted(qualities[q], key=lambda x: x['score'], reverse=True)
-            final_list.extend(sorted_q[:5]) 
+            sorted_final.extend(sorted_q[:5]) 
             
-        return sorted(final_list, key=lambda x: x['score'], reverse=True)[:20]
+        return sorted(sorted_final, key=lambda x: x['score'], reverse=True)[:20]
 
-    async def hunt(self, query: str) -> List[dict]:
-        all_results = []
-        local_tasks = []
+    async def search_local(self, query: str) -> List[dict]:
+        results = []
         if os.path.exists(self.local_playlists_dir):
+            tasks = []
             for filename in os.listdir(self.local_playlists_dir):
                 if filename.endswith(".m3u8"):
                     filepath = os.path.join(self.local_playlists_dir, filename)
-                    local_tasks.append(self.read_local_file(filepath, query))
-        
-        local_results = await asyncio.gather(*local_tasks)
-        for res in local_results:
-            all_results.extend(res)
+                    tasks.append(self.read_local_file(filepath, query))
+            
+            for res_list in await asyncio.gather(*tasks):
+                results.extend(res_list)
+        return results
 
-        async with aiohttp.ClientSession() as session:
-            remote_tasks = [self.fetch_m3u(session, url) for url in self.sources]
-            contents = await asyncio.gather(*remote_tasks)
-            
-            for content in contents:
-                if content:
-                    all_results.extend(self.parse_m3u(content, query))
-            
-            unique_results = {}
-            for res in all_results:
-                url = res['url']
-                if url not in unique_results or res['score'] > unique_results[url]['score']:
-                    unique_results[url] = res
-            
-            return sorted(unique_results.values(), key=lambda x: x['score'], reverse=True)
+    async def hunt_remote(self, query: str) -> List[dict]:
+        session = await self.get_session()
+        tasks = [self.fetch_m3u(session, url) for url in self.sources]
+        contents = await asyncio.gather(*tasks)
+        
+        results = []
+        for content in contents:
+            if content:
+                results.extend(self.parse_m3u(content, query))
+        return results
 
     async def read_local_file(self, filepath: str, query: str) -> List[dict]:
         try:
@@ -166,12 +182,7 @@ class IPTVHunter:
 
     async def validate_link(self, session: aiohttp.ClientSession, url: str) -> bool:
         try:
-            headers = self.get_headers()
-            async with session.head(url, headers=headers, timeout=5, allow_redirects=True) as response:
+            async with session.head(url, headers=self.get_headers(), timeout=5, allow_redirects=True) as response:
                 return response.status in [200, 206]
         except:
             return False
-
-    async def get_valid_links(self, query: str) -> List[dict]:
-        results = await self.deep_hunt(query)
-        return [r for r in results if r.get('status') == 'online']
